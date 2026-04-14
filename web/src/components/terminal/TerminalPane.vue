@@ -90,6 +90,18 @@ watch(isActive, (active) => {
         nextTick(() => {
             fit()
             focus()
+            const rows = term.value?.rows || 0
+            if (rows > 0) term.value?.refresh(0, rows - 1)
+            requestAnimationFrame(() => {
+                fit()
+                const r = term.value?.rows || 0
+                if (r > 0) term.value?.refresh(0, r - 1)
+            })
+            setTimeout(() => {
+                fit()
+                const r = term.value?.rows || 0
+                if (r > 0) term.value?.refresh(0, r - 1)
+            }, 60)
         })
     }
 })

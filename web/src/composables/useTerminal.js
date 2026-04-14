@@ -103,6 +103,35 @@ export function useTerminal(containerRef, { onData, onResize, theme = 'dark' } =
     const term = ref(null)
     const fitAddon = ref(null)
     let resizeObs = null
+    let pasteHandler = null
+    let lastSelectionAt = 0
+    let pendingPasteTimer = null
+
+    const SMART_COPY_WINDOW_MS = 2500
+    const PASTE_FALLBACK_DELAY_MS = 60
+    const PASTE_MANUAL_DEDUP_MS = 350
+    let lastManualPasteText = ''
+    let lastManualPasteAt = 0
+
+    function emitPastedText(text) {
+        if (!text) return
+        const now = Date.now()
+        if (text === lastManualPasteText && (now - lastManualPasteAt) < PASTE_MANUAL_DEDUP_MS) {
+            return
+        }
+        lastManualPasteText = text
+        lastManualPasteAt = now
+        onData?.(text)
+    }
+
+    async function readClipboardToTerminal() {
+        try {
+            const text = await navigator.clipboard?.readText?.()
+            emitPastedText(text)
+        } catch {
+            // 浏览器权限限制时忽略
+        }
+    }
 
     function createTerminal() {
         const currentTheme = unref(theme)
@@ -118,12 +147,35 @@ export function useTerminal(containerRef, { onData, onResize, theme = 'dark' } =
         })
 
         t.attachCustomKeyEventHandler((ev) => {
-            const isCopy = (ev.ctrlKey || ev.metaKey) && !ev.altKey && (ev.key === 'c' || ev.key === 'C')
-            if (isCopy && term.value?.hasSelection()) {
-                if (ev.type === 'keydown') {
-                    copyText(term.value.getSelection())
-                    term.value.clearSelection()
-                }
+            const isAccel = ev.ctrlKey || ev.metaKey
+            const isCopy = isAccel && !ev.altKey && (ev.key === 'c' || ev.key === 'C')
+            const isPaste = isAccel && !ev.altKey && (ev.key === 'v' || ev.key === 'V')
+            const hasSelection = term.value?.hasSelection()
+            const inSmartCopyWindow = (Date.now() - lastSelectionAt) < SMART_COPY_WINDOW_MS
+            const forceCopy = isCopy && ev.shiftKey
+            const smartCopy = isCopy && !ev.shiftKey && hasSelection && inSmartCopyWindow
+            const forcePaste = isPaste && ev.shiftKey
+
+            if ((forceCopy || smartCopy) && ev.type === 'keydown') {
+                copyText(term.value.getSelection())
+                term.value.clearSelection()
+                return false
+            }
+
+            if (isPaste && ev.type === 'keydown') {
+                // 优先等原生 paste 事件；若浏览器未派发，再用 clipboard API 回退。
+                ev.preventDefault()
+                if (pendingPasteTimer) clearTimeout(pendingPasteTimer)
+                pendingPasteTimer = setTimeout(() => {
+                    readClipboardToTerminal()
+                }, PASTE_FALLBACK_DELAY_MS)
+                return false
+            }
+
+            if (forcePaste && ev.type === 'keydown') {
+                ev.preventDefault()
+                if (pendingPasteTimer) clearTimeout(pendingPasteTimer)
+                readClipboardToTerminal()
                 return false
             }
             return true
@@ -144,6 +196,12 @@ export function useTerminal(containerRef, { onData, onResize, theme = 'dark' } =
             onResize?.(rows, cols)
         })
 
+        t.onSelectionChange(() => {
+            if (t.hasSelection()) {
+                lastSelectionAt = Date.now()
+            }
+        })
+
         return t
     }
 
@@ -152,6 +210,16 @@ export function useTerminal(containerRef, { onData, onResize, theme = 'dark' } =
         const t = createTerminal()
         t.open(containerRef.value)
         fitAddon.value.fit()
+
+        pasteHandler = (e) => {
+            const text = e.clipboardData?.getData('text/plain') || e.clipboardData?.getData('text') || ''
+            if (!text) return
+            e.preventDefault()
+            if (pendingPasteTimer) clearTimeout(pendingPasteTimer)
+            pendingPasteTimer = null
+            emitPastedText(text)
+        }
+        containerRef.value.addEventListener('paste', pasteHandler)
 
         resizeObs = new ResizeObserver(() => {
             fitAddon.value?.fit()
@@ -173,6 +241,12 @@ export function useTerminal(containerRef, { onData, onResize, theme = 'dark' } =
 
     function dispose() {
         resizeObs?.disconnect()
+        if (pendingPasteTimer) clearTimeout(pendingPasteTimer)
+        pendingPasteTimer = null
+        if (containerRef.value && pasteHandler) {
+            containerRef.value.removeEventListener('paste', pasteHandler)
+        }
+        pasteHandler = null
         term.value?.dispose()
         term.value = null
     }
