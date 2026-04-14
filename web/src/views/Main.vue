@@ -21,6 +21,7 @@ const termRefs = ref({})
 
 onMounted(async () => {
     await auth.fetchMe()
+    termStore.init()
     // 自动创建第一个终端
     if (termStore.tabs.length === 0) {
         newTab()

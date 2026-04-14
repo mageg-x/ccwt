@@ -1,7 +1,6 @@
 package service
 
 import (
-	"fmt"
 	"io"
 	"log"
 	"os"
@@ -125,10 +124,6 @@ var Pty = &PtyManager{
 	sessions: make(map[string]*PtySession),
 }
 
-func shellQuote(s string) string {
-	return "'" + strings.ReplaceAll(s, "'", "'\\''") + "'"
-}
-
 func mergeEnv(base []string, overrides map[string]string) []string {
 	idx := make(map[string]int, len(base))
 	out := make([]string, 0, len(base)+len(overrides))
@@ -157,22 +152,82 @@ func mergeEnv(base []string, overrides map[string]string) []string {
 	return out
 }
 
-func writeBashInit(username string) (string, error) {
+func appendRoBindIfExists(args []string, hostPath string) []string {
+	if _, err := os.Stat(hostPath); err == nil {
+		args = append(args, "--ro-bind", hostPath, hostPath)
+	}
+	return args
+}
+
+func buildBubblewrapCommand(username, shell string) (*exec.Cmd, error) {
+	bwrap, err := exec.LookPath("bwrap")
+	if err != nil {
+		return nil, err
+	}
+
 	userHome := config.UserDir(username)
 	workspace := config.UserWorkspace(username)
+
+	// 在沙箱内统一映射成固定路径，避免暴露宿主机路径结构
+	sbHome := "/home/ccwt"
+	sbWorkspace := sbHome + "/workspace"
+	sbClaudeDir := sbHome + "/.claude"
+	sbBashrc := sbHome + "/.ccwt_bashrc"
+	sbHistory := sbHome + "/.bash_history"
+
+	args := []string{
+		"--die-with-parent",
+		"--proc", "/proc",
+		"--dev", "/dev",
+		"--tmpfs", "/tmp",
+		"--bind", userHome, sbHome,
+		"--chdir", sbWorkspace,
+		"--setenv", "HOME", sbHome,
+		"--setenv", "CLAUDE_CONFIG_DIR", sbClaudeDir,
+		"--setenv", "HISTFILE", sbHistory,
+		"--setenv", "__CCWT_WORKSPACE", sbWorkspace,
+		"--setenv", "CCWT_USER", username,
+		"--setenv", "TERM", "xterm-256color",
+		"--setenv", "SHELL", shell,
+	}
+	args = appendRoBindIfExists(args, "/bin")
+	args = appendRoBindIfExists(args, "/usr")
+	args = appendRoBindIfExists(args, "/lib")
+	args = appendRoBindIfExists(args, "/lib64")
+	args = appendRoBindIfExists(args, "/etc")
+	args = appendRoBindIfExists(args, "/run")
+
+	args = append(args, "--", shell, "--noprofile", "--rcfile", sbBashrc, "-i")
+
+	cmd := exec.Command(bwrap, args...)
+	cmd.Dir = workspace
+	cmd.Env = mergeEnv(os.Environ(), map[string]string{
+		"HOME":              userHome,
+		"CLAUDE_CONFIG_DIR": config.UserClaudeDir(username),
+		"CCWT_USER":         username,
+		"TERM":              "xterm-256color",
+		"SHELL":             shell,
+		"PWD":               workspace,
+	})
+	return cmd, nil
+}
+
+func writeBashInit(username string) (string, error) {
+	userHome := config.UserDir(username)
 	initPath := filepath.Join(userHome, ".ccwt_bashrc")
 
-	content := fmt.Sprintf(`# CCWT managed bash init
-export HOME=%s
-export CLAUDE_CONFIG_DIR=%s
-export HISTFILE=%s
+	content := `# CCWT managed bash init
+export HOME="${HOME:-$PWD}"
+export CLAUDE_CONFIG_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
+export HISTFILE="${HISTFILE:-$HOME/.bash_history}"
+export __CCWT_WORKSPACE="${__CCWT_WORKSPACE:-$HOME/workspace}"
 export HISTSIZE=10000
 export HISTFILESIZE=20000
 shopt -s histappend cmdhist checkwinsize
+mkdir -p "$HOME" "$__CCWT_WORKSPACE" >/dev/null 2>&1 || true
+touch "$HISTFILE" >/dev/null 2>&1 || true
 export PROMPT_COMMAND="history -a; history -n${PROMPT_COMMAND:+; $PROMPT_COMMAND}"
-__CCWT_WORKSPACE=%s
-cd() {
-  builtin cd "$@" || return
+__ccwt_guard_workspace() {
   case "$PWD/" in
     "$__CCWT_WORKSPACE"/|"$__CCWT_WORKSPACE"/*) ;;
     *)
@@ -181,11 +236,18 @@ cd() {
       ;;
   esac
 }
+cd() {
+  builtin cd "$@" || return
+  __ccwt_guard_workspace
+}
+pushd() { builtin pushd "$@" && __ccwt_guard_workspace; }
+popd() { builtin popd "$@" && __ccwt_guard_workspace; }
+PROMPT_COMMAND="__ccwt_guard_workspace; ${PROMPT_COMMAND}"
 case "$PWD/" in
   "$__CCWT_WORKSPACE"/|"$__CCWT_WORKSPACE"/*) ;;
   *) builtin cd "$__CCWT_WORKSPACE" ;;
 esac
-`, shellQuote(userHome), shellQuote(config.UserClaudeDir(username)), shellQuote(filepath.Join(userHome, ".bash_history")), shellQuote(workspace))
+`
 
 	if err := os.WriteFile(initPath, []byte(content), 0600); err != nil {
 		return "", err
@@ -232,15 +294,23 @@ func (m *PtyManager) Create(id, username string, rows, cols uint16) (*PtySession
 	}
 
 	cmd := exec.Command(shell, "--noprofile", "--rcfile", bashInit, "-i")
-	cmd.Dir = config.UserWorkspace(username)
-	cmd.Env = mergeEnv(os.Environ(), map[string]string{
-		"CLAUDE_CONFIG_DIR": config.UserClaudeDir(username),
-		"HOME":              config.UserDir(username),
-		"CCWT_USER":         username,
-		"TERM":              "xterm-256color",
-		"SHELL":             shell,
-		"PWD":               config.UserWorkspace(username),
-	})
+	if bwrapCmd, berr := buildBubblewrapCommand(username, shell); berr == nil {
+		cmd = bwrapCmd
+		log.Printf("PTY 隔离模式: user=%s mode=bwrap", username)
+	} else {
+		cmd.Dir = config.UserWorkspace(username)
+		cmd.Env = mergeEnv(os.Environ(), map[string]string{
+			"CLAUDE_CONFIG_DIR": config.UserClaudeDir(username),
+			"HOME":              config.UserDir(username),
+			"HISTFILE":          filepath.Join(config.UserDir(username), ".bash_history"),
+			"__CCWT_WORKSPACE":  config.UserWorkspace(username),
+			"CCWT_USER":         username,
+			"TERM":              "xterm-256color",
+			"SHELL":             shell,
+			"PWD":               config.UserWorkspace(username),
+		})
+		log.Printf("PTY 隔离模式: user=%s mode=soft-shell-only reason=%v", username, berr)
+	}
 
 	ptmx, err := pty.StartWithSize(cmd, &pty.Winsize{Rows: rows, Cols: cols})
 	if err != nil {
