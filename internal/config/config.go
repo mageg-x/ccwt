@@ -75,6 +75,14 @@ func UserWorkspace(username string) string {
 	return filepath.Join(UserDir(username), "workspace")
 }
 
+// SetInviteCode 设置邀请码（命令行参数优先）
+func SetInviteCode(code string) {
+	viper.Set("register.invite_code", code)
+	if Cfg != nil {
+		Cfg.Register.InviteCode = code
+	}
+}
+
 // Init 初始化配置
 func Init() {
 	once.Do(func() {

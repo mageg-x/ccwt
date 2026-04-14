@@ -104,10 +104,8 @@ export function useTerminal(containerRef, { onData, onResize, theme = 'dark' } =
     const fitAddon = ref(null)
     let resizeObs = null
     let pasteHandler = null
-    let lastSelectionAt = 0
     let pendingPasteTimer = null
 
-    const SMART_COPY_WINDOW_MS = 2500
     const PASTE_FALLBACK_DELAY_MS = 60
     const PASTE_MANUAL_DEDUP_MS = 350
     let lastManualPasteText = ''
@@ -150,14 +148,14 @@ export function useTerminal(containerRef, { onData, onResize, theme = 'dark' } =
             const isAccel = ev.ctrlKey || ev.metaKey
             const isCopy = isAccel && !ev.altKey && (ev.key === 'c' || ev.key === 'C')
             const isPaste = isAccel && !ev.altKey && (ev.key === 'v' || ev.key === 'V')
-            const hasSelection = term.value?.hasSelection()
-            const inSmartCopyWindow = (Date.now() - lastSelectionAt) < SMART_COPY_WINDOW_MS
+            const selectedText = term.value?.getSelection?.() || ''
+            const hasSelection = selectedText.length > 0
             const forceCopy = isCopy && ev.shiftKey
-            const smartCopy = isCopy && !ev.shiftKey && hasSelection && inSmartCopyWindow
+            const smartCopy = isCopy && !ev.shiftKey && hasSelection
             const forcePaste = isPaste && ev.shiftKey
 
             if ((forceCopy || smartCopy) && ev.type === 'keydown') {
-                copyText(term.value.getSelection())
+                copyText(selectedText)
                 term.value.clearSelection()
                 return false
             }
@@ -194,12 +192,6 @@ export function useTerminal(containerRef, { onData, onResize, theme = 'dark' } =
 
         t.onResize(({ rows, cols }) => {
             onResize?.(rows, cols)
-        })
-
-        t.onSelectionChange(() => {
-            if (t.hasSelection()) {
-                lastSelectionAt = Date.now()
-            }
         })
 
         return t

@@ -2,6 +2,7 @@
 import { ref, watch, onMounted, onUnmounted, nextTick, computed } from 'vue'
 import { useTerminalStore } from '../../stores/terminal'
 import { useAppStore } from '../../stores/app'
+import { useFileStore } from '../../stores/file'
 import { useTerminal } from '../../composables/useTerminal'
 
 const props = defineProps({
@@ -10,16 +11,28 @@ const props = defineProps({
 
 const termStore = useTerminalStore()
 const app = useAppStore()
+const fileStore = useFileStore()
 const containerRef = ref(null)
 const isActive = computed(() => termStore.activeId === props.tabId)
 
 let ws = null
 let closed = false
+let refreshTimer = null
+
+function scheduleTreeRefresh() {
+    if (refreshTimer) clearTimeout(refreshTimer)
+    refreshTimer = setTimeout(() => {
+        fileStore.loadTree()
+    }, 280)
+}
 
 const { term, mount, write, fit, focus } = useTerminal(containerRef, {
     onData: (data) => {
         if (ws?.readyState === WebSocket.OPEN) {
             ws.send(data)
+            if (data.includes('\r')) {
+                scheduleTreeRefresh()
+            }
         }
     },
     onResize: (rows, cols) => {
@@ -82,6 +95,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
     closed = true
+    if (refreshTimer) clearTimeout(refreshTimer)
     ws?.close()
 })
 

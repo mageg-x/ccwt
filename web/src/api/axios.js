@@ -10,13 +10,21 @@ const api = axios.create({
 api.interceptors.response.use(
     res => res,
     async err => {
-        if (err.response?.status === 401 && !err.config._retry) {
-            err.config._retry = true
+        const cfg = err.config || {}
+        const reqUrl = cfg.url || ''
+        const isAuthApi = reqUrl.includes('/auth/login') ||
+            reqUrl.includes('/auth/register') ||
+            reqUrl.includes('/auth/refresh')
+
+        if (err.response?.status === 401 && !cfg._retry && !cfg.__skipRefresh && !isAuthApi) {
+            cfg._retry = true
             try {
-                await axios.post('/api/auth/refresh', {}, { withCredentials: true })
-                return api(err.config)
+                await api.post('/auth/refresh', {}, { __skipRefresh: true })
+                return api(cfg)
             } catch {
-                window.location.href = '/login'
+                if (window.location.pathname !== '/login') {
+                    window.location.replace('/login')
+                }
             }
         }
         return Promise.reject(err)

@@ -32,14 +32,15 @@ async function submit() {
 </script>
 
 <template>
-    <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 p-4">
+    <div class="fixed inset-0 overflow-y-auto bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900">
         <!-- 背景装饰 -->
-        <div class="fixed inset-0 overflow-hidden pointer-events-none">
+        <div class="absolute inset-0 overflow-hidden pointer-events-none">
             <div class="absolute top-1/4 -left-20 w-72 h-72 bg-indigo-500/10 rounded-full blur-3xl"></div>
             <div class="absolute bottom-1/4 -right-20 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl"></div>
         </div>
 
-        <div class="w-full max-w-md relative z-10">
+        <div class="min-h-full flex items-start sm:items-center justify-center p-4 py-8 sm:py-4">
+            <div class="w-full max-w-md relative z-10">
             <!-- Logo -->
             <div class="text-center mb-8">
                 <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-indigo-500/20 border border-indigo-500/30 mb-4">
@@ -124,6 +125,7 @@ async function submit() {
             <p class="text-center text-slate-500 text-xs mt-6">
                 首个注册的用户将自动成为管理员
             </p>
+            </div>
         </div>
     </div>
 </template>

@@ -2,6 +2,7 @@ package main
 
 import (
 	"embed"
+	"flag"
 	"fmt"
 	"io/fs"
 	"log"
@@ -16,8 +17,14 @@ import (
 var webEmbed embed.FS
 
 func main() {
-	// 初始化配置
+	code := flag.String("code", "", "邀请码")
+	flag.Parse()
+
 	config.Init()
+
+	if *code != "" {
+		config.SetInviteCode(*code)
+	}
 
 	// 初始化数据库
 	db.Init()
