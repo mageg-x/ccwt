@@ -29,13 +29,14 @@ type ServerConfig struct {
 }
 
 type JWTConfig struct {
-	Secret         string `mapstructure:"secret"`
-	AccessExpire   int    `mapstructure:"access_expire"`  // 分钟
-	RefreshExpire  int    `mapstructure:"refresh_expire"` // 天
+	Secret        string `mapstructure:"secret"`
+	AccessExpire  int    `mapstructure:"access_expire"`  // 分钟
+	RefreshExpire int    `mapstructure:"refresh_expire"` // 天
 }
 
 type RegisterConfig struct {
-	Open bool `mapstructure:"open"` // 是否开放注册
+	Open       bool   `mapstructure:"open"`        // 是否开放注册
+	InviteCode string `mapstructure:"invite_code"` // 邀请码（为空则不限制）
 }
 
 type ProxyConfig struct {
@@ -84,9 +85,10 @@ func Init() {
 		viper.SetDefault("server.data_dir", "")
 		viper.SetDefault("server.log_level", "info")
 		viper.SetDefault("jwt.secret", "ccwt-secret-change-me")
-		viper.SetDefault("jwt.access_expire", 60*24)   // 24小时
-		viper.SetDefault("jwt.refresh_expire", 30)       // 30天
+		viper.SetDefault("jwt.access_expire", 60*24) // 24小时
+		viper.SetDefault("jwt.refresh_expire", 30)   // 30天
 		viper.SetDefault("register.open", true)
+		viper.SetDefault("register.invite_code", "")
 		viper.SetDefault("proxy.port", 1080)
 		viper.SetDefault("voice.enabled", false)
 		viper.SetDefault("voice.model_path", "")

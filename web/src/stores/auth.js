@@ -46,8 +46,8 @@ export const useAuthStore = defineStore('auth', () => {
         return data
     }
 
-    async function register(username, password) {
-        const { data } = await authApi.register({ username, password })
+    async function register(username, password, inviteCode) {
+        const { data } = await authApi.register({ username, password, invite_code: inviteCode })
         user.value = data.user
         initialized.value = true
         return data

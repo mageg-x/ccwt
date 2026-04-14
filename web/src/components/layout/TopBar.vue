@@ -23,24 +23,29 @@ async function doLogout() {
 </script>
 
 <template>
-    <header class="h-12 flex items-center px-3 gap-2 border-b shrink-0 select-none"
-        :class="app.isDark ? 'bg-slate-800/80 border-slate-700/50 text-slate-200' : 'bg-white border-slate-200 text-slate-800'"
+    <header class="h-14 flex items-center px-3 md:px-4 gap-2 border-b shrink-0 select-none backdrop-blur-xl topbar-shell relative z-20"
+        :class="app.isDark ? 'bg-slate-900/55 border-slate-700/40 text-slate-200' : 'bg-white/80 border-slate-200/90 text-slate-800'"
     >
         <!-- 汉堡菜单 -->
-        <button @click="app.toggleSidebar" class="p-2 rounded-lg hover:bg-slate-700/50 transition-colors" title="切换侧边栏">
+        <button @click="app.toggleSidebar" class="p-2 rounded-xl hover:bg-slate-700/40 transition-colors" title="切换侧边栏">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
             </svg>
         </button>
 
         <!-- Logo -->
-        <span class="font-bold text-indigo-400 tracking-tight hidden sm:inline">CCWT</span>
+        <div class="hidden sm:flex items-center gap-2">
+            <span class="inline-flex items-center justify-center w-7 h-7 rounded-lg ring-1 text-xs font-bold"
+                :class="app.isDark ? 'bg-cyan-400/15 text-cyan-300 ring-cyan-300/30' : 'bg-cyan-100 text-cyan-700 ring-cyan-300/60'">C</span>
+            <span class="font-semibold tracking-[0.08em]"
+                :class="app.isDark ? 'text-slate-100/95' : 'text-slate-800'">CCWT</span>
+        </div>
 
         <div class="flex-1"></div>
 
         <!-- 代理开关 -->
         <button v-if="auth.isAdmin" @click="showProxy = !showProxy"
-            class="p-2 rounded-lg hover:bg-slate-700/50 transition-colors relative" title="SOCKS5 代理">
+            class="p-2 rounded-xl hover:bg-slate-700/40 transition-colors relative" title="SOCKS5 代理">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
             </svg>
@@ -48,7 +53,7 @@ async function doLogout() {
 
         <!-- 语音输入 -->
         <button @click="showVoice = !showVoice"
-            class="p-2 rounded-lg hover:bg-slate-700/50 transition-colors" title="语音输入">
+            class="p-2 rounded-xl hover:bg-slate-700/40 transition-colors" title="语音输入">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
             </svg>
@@ -56,7 +61,7 @@ async function doLogout() {
 
         <!-- 主题切换 -->
         <button @click="app.toggleTheme"
-            class="p-2 rounded-lg hover:bg-slate-700/50 transition-colors" title="切换主题">
+            class="p-2 rounded-xl hover:bg-slate-700/40 transition-colors" title="切换主题">
             <svg v-if="app.isDark" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
             </svg>
@@ -67,7 +72,7 @@ async function doLogout() {
 
         <!-- 历史 -->
         <button @click="router.push('/history')"
-            class="p-2 rounded-lg hover:bg-slate-700/50 transition-colors" title="会话历史">
+            class="p-2 rounded-xl hover:bg-slate-700/40 transition-colors" title="会话历史">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
@@ -76,7 +81,7 @@ async function doLogout() {
         <!-- 用户菜单 -->
         <div class="relative">
             <button @click="showUserMenu = !showUserMenu"
-                class="flex items-center gap-2 p-2 rounded-lg hover:bg-slate-700/50 transition-colors">
+                class="flex items-center gap-2 p-2 rounded-xl hover:bg-slate-700/40 transition-colors">
                 <div class="w-7 h-7 rounded-full bg-indigo-500/30 flex items-center justify-center text-xs font-bold text-indigo-300">
                     {{ auth.user?.username?.[0]?.toUpperCase() }}
                 </div>

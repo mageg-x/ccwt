@@ -9,6 +9,7 @@ const auth = useAuthStore()
 const isRegister = ref(false)
 const username = ref('')
 const password = ref('')
+const inviteCode = ref('')
 const error = ref('')
 const loading = ref(false)
 
@@ -17,7 +18,7 @@ async function submit() {
     loading.value = true
     try {
         if (isRegister.value) {
-            await auth.register(username.value, password.value)
+            await auth.register(username.value, password.value, inviteCode.value)
         } else {
             await auth.login(username.value, password.value)
         }
@@ -77,6 +78,16 @@ async function submit() {
                             autocomplete="current-password"
                             class="w-full px-4 py-3 bg-slate-900/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all"
                             placeholder="输入密码（至少6位）"
+                        />
+                    </div>
+                    <div v-if="isRegister">
+                        <label class="block text-sm font-medium text-slate-300 mb-2">邀请码</label>
+                        <input
+                            v-model="inviteCode"
+                            type="text"
+                            autocomplete="off"
+                            class="w-full px-4 py-3 bg-slate-900/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all"
+                            placeholder="输入邀请码（如需要）"
                         />
                     </div>
 

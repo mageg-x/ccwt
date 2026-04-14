@@ -2,13 +2,13 @@
 
 /* 自定义主题变量 */
 :root {
-    --color-primary: #6366f1;
-    --color-primary-hover: #818cf8;
-    --color-bg-dark: #0f172a;
-    --color-bg-card: #1e293b;
-    --color-bg-elevated: #334155;
+    --color-primary: #06b6d4;
+    --color-primary-hover: #22d3ee;
+    --color-bg-dark: #020617;
+    --color-bg-card: #0f172a;
+    --color-bg-elevated: #1e293b;
     --color-border: #334155;
-    --color-text: #e2e8f0;
+    --color-text: #dbeafe;
     --color-text-muted: #94a3b8;
     --color-success: #22c55e;
     --color-danger: #ef4444;
@@ -17,12 +17,78 @@
 
 /* 浅色主题 */
 .theme-light {
-    --color-bg-dark: #f8fafc;
+    --color-bg-dark: #f3f7fb;
     --color-bg-card: #ffffff;
-    --color-bg-elevated: #f1f5f9;
-    --color-border: #e2e8f0;
-    --color-text: #1e293b;
-    --color-text-muted: #64748b;
+    --color-bg-elevated: #e8f0f7;
+    --color-border: #d6e2ef;
+    --color-text: #0f172a;
+    --color-text-muted: #475569;
+}
+
+html, body, #app {
+    font-family: "Manrope", "IBM Plex Sans", "Segoe UI", "PingFang SC", "Noto Sans CJK SC", sans-serif;
+}
+
+.app-shell {
+    background: var(--color-bg-dark);
+}
+
+.app-shell-dark {
+    background:
+        radial-gradient(900px 500px at 10% -5%, rgba(8, 145, 178, 0.25), transparent 55%),
+        radial-gradient(800px 420px at 90% 10%, rgba(14, 116, 144, 0.22), transparent 58%),
+        linear-gradient(160deg, #020617 0%, #0b1222 45%, #0f172a 100%);
+}
+
+.app-shell-light {
+    background:
+        radial-gradient(800px 400px at 5% -5%, rgba(14, 165, 233, 0.12), transparent 55%),
+        radial-gradient(780px 350px at 95% 5%, rgba(34, 197, 94, 0.08), transparent 55%),
+        linear-gradient(180deg, #f7fbff 0%, #f1f6fb 100%);
+}
+
+.app-shell-glow {
+    position: absolute;
+    pointer-events: none;
+    border-radius: 999px;
+    filter: blur(56px);
+    opacity: 0.38;
+}
+
+.app-shell-glow-a {
+    width: 360px;
+    height: 360px;
+    left: -120px;
+    top: -120px;
+    background: rgba(34, 211, 238, 0.48);
+}
+
+.app-shell-glow-b {
+    width: 340px;
+    height: 340px;
+    right: -100px;
+    bottom: 30px;
+    background: rgba(16, 185, 129, 0.36);
+}
+
+.terminal-stage {
+    border-radius: 16px;
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    backdrop-filter: blur(10px);
+    overflow: hidden;
+}
+
+.terminal-stage-body {
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.45), rgba(2, 6, 23, 0.62));
+}
+
+.theme-light .terminal-stage {
+    border-color: rgba(148, 163, 184, 0.35);
+    background: rgba(255, 255, 255, 0.82);
+}
+
+.theme-light .terminal-stage-body {
+    background: linear-gradient(180deg, rgba(248, 252, 255, 0.92), rgba(241, 245, 249, 0.9));
 }
 
 * {
@@ -46,6 +112,14 @@
 
 .xterm-viewport {
     scrollbar-width: thin;
+}
+
+.xterm {
+    border-radius: 12px;
+}
+
+.xterm-screen canvas {
+    border-radius: 10px;
 }
 
 /* 全局动画 */

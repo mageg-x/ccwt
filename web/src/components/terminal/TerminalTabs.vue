@@ -18,8 +18,8 @@ function dblClick(tab) {
 </script>
 
 <template>
-    <div class="h-9 flex items-end gap-0.5 px-2 overflow-x-auto shrink-0 scrollbar-none"
-        :class="app.isDark ? 'bg-slate-900/50' : 'bg-slate-100'">
+    <div class="h-11 flex items-center gap-1 px-2 overflow-x-auto shrink-0 scrollbar-none border-b"
+        :class="app.isDark ? 'bg-slate-900/40 border-slate-700/40' : 'bg-white/70 border-slate-200/90'">
         <div
             v-for="tab in termStore.tabs"
             :key="tab.id"
@@ -29,17 +29,17 @@ function dblClick(tab) {
             @keydown.space.prevent="termStore.activeId = tab.id"
             role="button"
             tabindex="0"
-            class="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-t-lg transition-colors max-w-[160px] group"
+            class="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-xl transition-all max-w-[180px] group border"
             :class="tab.id === termStore.activeId
-                ? (app.isDark ? 'bg-slate-800 text-white' : 'bg-white text-slate-800')
-                : (app.isDark ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50')"
+                ? (app.isDark ? 'bg-cyan-400/10 text-cyan-100 border-cyan-300/40 shadow-[0_0_24px_rgba(34,211,238,0.15)]' : 'bg-cyan-50 text-cyan-800 border-cyan-300/60')
+                : (app.isDark ? 'text-slate-400 border-white/10 hover:text-slate-100 hover:bg-white/5' : 'text-slate-500 border-slate-200 hover:text-slate-700 hover:bg-slate-100')"
         >
             <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
             <span class="truncate">{{ tab.name }}</span>
             <button @click="closeTab($event, tab.id)"
-                class="p-0.5 rounded opacity-0 group-hover:opacity-100 hover:bg-red-500/30 transition-all">
+                class="p-0.5 rounded-md opacity-0 group-hover:opacity-100 hover:bg-red-500/30 transition-all">
                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>
@@ -48,8 +48,8 @@ function dblClick(tab) {
 
         <!-- 新建标签 -->
         <button @click="emit('newTab')"
-            class="p-1.5 rounded-t-lg transition-colors"
-            :class="app.isDark ? 'text-slate-400 hover:text-white hover:bg-slate-800/50' : 'text-slate-400 hover:text-slate-700 hover:bg-slate-200/50'"
+            class="p-2 rounded-xl transition-colors border"
+            :class="app.isDark ? 'text-slate-300 border-white/10 hover:text-white hover:bg-white/5' : 'text-slate-500 border-slate-200 hover:text-slate-700 hover:bg-slate-100'"
             title="新建终端">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />

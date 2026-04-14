@@ -30,6 +30,11 @@ func Register(c *gin.Context) {
 		return
 	}
 
+	if config.Cfg.Register.InviteCode != "" && req.InviteCode != config.Cfg.Register.InviteCode {
+		c.JSON(http.StatusForbidden, gin.H{"error": "邀请码错误"})
+		return
+	}
+
 	hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
 		log.Printf("Register bcrypt失败: user=%s err=%v", req.Username, err)

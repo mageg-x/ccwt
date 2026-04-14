@@ -107,7 +107,10 @@ defineExpose({ write, focus, fit })
 
 <style scoped>
 .terminal-pane {
-    padding: 4px;
+    padding: 6px;
     box-sizing: border-box;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
 }
 </style>

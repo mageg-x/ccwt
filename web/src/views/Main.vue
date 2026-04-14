@@ -97,25 +97,28 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
 </script>
 
 <template>
-    <div class="h-full flex flex-col" :class="app.isDark ? 'bg-slate-900 text-slate-200' : 'bg-white text-slate-800'">
+    <div class="app-shell h-full flex flex-col relative overflow-hidden"
+        :class="app.isDark ? 'app-shell-dark text-slate-200' : 'app-shell-light text-slate-800'">
+        <div class="app-shell-glow app-shell-glow-a"></div>
+        <div class="app-shell-glow app-shell-glow-b"></div>
         <TopBar @voiceResult="handleVoiceResult" />
 
-        <div class="flex flex-1 overflow-hidden">
+        <div class="flex flex-1 overflow-hidden relative z-10">
             <Sidebar @cd="handleCd" @openFile="handleOpenFile" />
 
             <!-- 主内容区 -->
-            <main class="flex-1 flex flex-col overflow-hidden min-w-0">
+            <main class="flex-1 flex flex-col overflow-hidden min-w-0 px-2 pb-2">
                 <!-- 文件编辑器（悬浮覆盖在终端上方） -->
-                <div v-if="fileStore.editingFile" class="flex-1 flex flex-col overflow-hidden">
+                <div v-if="fileStore.editingFile" class="flex-1 flex flex-col overflow-hidden rounded-2xl border border-white/10 backdrop-blur-md">
                     <FileEditor />
                 </div>
 
                 <!-- 终端区域 -->
-                <div v-show="!fileStore.editingFile" class="flex-1 flex flex-col overflow-hidden">
+                <div v-show="!fileStore.editingFile" class="flex-1 flex flex-col overflow-hidden terminal-stage">
                     <TerminalTabs @newTab="newTab" />
 
                     <!-- 终端面板 -->
-                    <div class="flex-1 relative overflow-hidden" :class="app.isDark ? 'bg-slate-900' : 'bg-white'">
+                    <div class="terminal-stage-body flex-1 relative overflow-hidden">
                         <TerminalPane
                             v-for="tab in termStore.tabs"
                             :key="tab.id"

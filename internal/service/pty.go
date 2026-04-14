@@ -221,12 +221,31 @@ export HOME="${HOME:-$PWD}"
 export CLAUDE_CONFIG_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
 export HISTFILE="${HISTFILE:-$HOME/.bash_history}"
 export __CCWT_WORKSPACE="${__CCWT_WORKSPACE:-$HOME/workspace}"
+export COLORTERM=truecolor
+export TERM="${TERM:-xterm-256color}"
 export HISTSIZE=10000
 export HISTFILESIZE=20000
 shopt -s histappend cmdhist checkwinsize
 mkdir -p "$HOME" "$__CCWT_WORKSPACE" >/dev/null 2>&1 || true
 touch "$HISTFILE" >/dev/null 2>&1 || true
 export PROMPT_COMMAND="history -a; history -n${PROMPT_COMMAND:+; $PROMPT_COMMAND}"
+
+# 彩色输出增强：目录、grep、分页器、提示符
+if command -v dircolors >/dev/null 2>&1; then
+  eval "$(dircolors -b 2>/dev/null)"
+fi
+if [ -z "${LS_COLORS:-}" ]; then
+  export LS_COLORS='di=1;38;5;81:ln=38;5;117:so=38;5;213:pi=38;5;213:ex=1;38;5;120:bd=38;5;183:cd=38;5;183:su=37;41:sg=30;43:tw=30;42:ow=30;43'
+fi
+alias ls='ls --color=auto'
+alias ll='ls -alF --color=auto'
+alias la='ls -A --color=auto'
+alias l='ls -CF --color=auto'
+alias grep='grep --color=auto'
+alias egrep='egrep --color=auto'
+alias fgrep='fgrep --color=auto'
+export LESS='-R'
+
 __ccwt_guard_workspace() {
   case "$PWD/" in
     "$__CCWT_WORKSPACE"/|"$__CCWT_WORKSPACE"/*) ;;
@@ -247,6 +266,9 @@ case "$PWD/" in
   "$__CCWT_WORKSPACE"/|"$__CCWT_WORKSPACE"/*) ;;
   *) builtin cd "$__CCWT_WORKSPACE" ;;
 esac
+if [ -t 1 ]; then
+  PS1='\[\e[38;5;81m\]\u\[\e[0m\]@\[\e[38;5;111m\]\h \[\e[38;5;150m\]\w\[\e[0m\]\n\[\e[38;5;45m\]❯\[\e[0m\] '
+fi
 `
 
 	if err := os.WriteFile(initPath, []byte(content), 0600); err != nil {
