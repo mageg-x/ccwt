@@ -7,6 +7,10 @@
 > Self-hosted multi-user Web workspace for Claude Code CLI | User Isolation · Project Isolation · Cross-Platform
 
 <p align="center">
+  English | <a href="./README.md">中文</a>
+</p>
+
+<p align="center">
   <a href="https://github.com/ccwt/ccwt/releases">
     <img src="https://img.shields.io/badge/version-1.0.0-blue.svg" alt="version">
   </a>

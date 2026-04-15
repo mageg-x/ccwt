@@ -7,6 +7,10 @@
 > 专为 Claude Code CLI 设计的自托管多用户 Web 工作台 | 多用户隔离 · 项目隔离 · 全平台自适应
 
 <p align="center">
+  <a href="./README_EN.md">English</a> | 中文
+</p>
+
+<p align="center">
   <a href="https://github.com/ccwt/ccwt/releases">
     <img src="https://img.shields.io/badge/version-1.0.0-blue.svg" alt="version">
   </a>
