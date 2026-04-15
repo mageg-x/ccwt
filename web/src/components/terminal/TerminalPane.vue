@@ -89,6 +89,16 @@ function connect() {
     ws.onerror = () => {}
 }
 
+function sendInput(data) {
+    if (!data) return
+    if (ws?.readyState === WebSocket.OPEN) {
+        ws.send(data)
+        if (data.includes('\r')) {
+            scheduleTreeRefresh()
+        }
+    }
+}
+
 onMounted(async () => {
     await nextTick()
     mount()
@@ -128,7 +138,7 @@ watch(isActive, (active) => {
     })
 })
 
-defineExpose({ write, focus, fit })
+defineExpose({ sendInput, focus, fit })
 </script>
 
 <template>

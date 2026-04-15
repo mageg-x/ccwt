@@ -37,9 +37,7 @@ function handleCd(path) {
     const active = termStore.activeTab
     if (active) {
         const termPane = termRefs.value[active.id]
-        if (termPane) {
-            termPane.write(`cd ${path}\r`)
-        }
+        termPane?.sendInput?.(`cd ${path}\r`)
     }
     // 移动端自动关闭侧边栏
     if (app.isMobile) {
@@ -60,9 +58,8 @@ function handleVoiceResult(text) {
     const active = termStore.activeTab
     if (active) {
         const termPane = termRefs.value[active.id]
-        if (termPane) {
-            termPane.write(text)
-        }
+        // 仅注入命令文本，不自动回车执行；用户可手动确认后回车
+        termPane?.sendInput?.(text.endsWith(' ') ? text : `${text} `)
     }
 }
 
@@ -71,10 +68,8 @@ function handleVirtualKey(key) {
     const active = termStore.activeTab
     if (active) {
         const termPane = termRefs.value[active.id]
-        if (termPane) {
-            termPane.write(key)
-            termPane.focus()
-        }
+        termPane?.sendInput?.(key)
+        termPane?.focus?.()
     }
 }
 
