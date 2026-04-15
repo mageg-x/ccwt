@@ -6,6 +6,7 @@ export const useFileStore = defineStore('file', () => {
     const tree = ref(null)
     const loading = ref(false)
     const editingFile = ref(null) // { path, content, language }
+    const expandedByPath = ref({})
 
     async function loadTree(path = '.') {
         loading.value = true
@@ -49,5 +50,30 @@ export const useFileStore = defineStore('file', () => {
         }
     }
 
-    return { tree, loading, editingFile, loadTree, openFile, closeEditor, saveFile }
+    function isExpanded(path, depth = 0) {
+        if (!path) return depth < 2
+        if (Object.prototype.hasOwnProperty.call(expandedByPath.value, path)) {
+            return !!expandedByPath.value[path]
+        }
+        return depth < 2
+    }
+
+    function setExpanded(path, value) {
+        if (!path) return
+        expandedByPath.value = {
+            ...expandedByPath.value,
+            [path]: !!value,
+        }
+    }
+
+    function toggleExpanded(path, depth = 0) {
+        const next = !isExpanded(path, depth)
+        setExpanded(path, next)
+        return next
+    }
+
+    return {
+        tree, loading, editingFile, loadTree, openFile, closeEditor, saveFile,
+        isExpanded, setExpanded, toggleExpanded,
+    }
 })

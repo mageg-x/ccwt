@@ -1,6 +1,7 @@
 <script setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useAppStore } from '../../stores/app'
+import { useFileStore } from '../../stores/file'
 import ContextMenu from './ContextMenu.vue'
 
 const props = defineProps({
@@ -10,21 +11,25 @@ const props = defineProps({
 
 const emit = defineEmits(['cd', 'openFile'])
 const app = useAppStore()
-const expanded = ref(props.depth < 2) // 前2层默认展开
+const fileStore = useFileStore()
+const expanded = computed(() => fileStore.isExpanded(props.node.path, props.depth))
 const contextMenu = ref(null) // { x, y, node }
 
 function toggle() {
     if (props.node.is_dir) {
-        expanded.value = !expanded.value
+        fileStore.toggleExpanded(props.node.path, props.depth)
     }
 }
 
 function handleClick() {
-    if (props.node.is_dir) {
-        toggle()
-        emit('cd', props.node.path)
-    } else {
+    if (!props.node.is_dir) {
         emit('openFile', props.node.path)
+    }
+}
+
+function handleDirCd() {
+    if (props.node.is_dir) {
+        emit('cd', props.node.path)
     }
 }
 
@@ -33,7 +38,6 @@ function onContextMenu(e) {
     contextMenu.value = { x: e.clientX, y: e.clientY, node: props.node }
 }
 
-// 文件图标
 function fileIcon(name) {
     const ext = name.split('.').pop()?.toLowerCase()
     const icons = {
@@ -43,6 +47,7 @@ function fileIcon(name) {
     }
     return icons[ext] || '📄'
 }
+
 </script>
 
 <template>
@@ -55,17 +60,32 @@ function fileIcon(name) {
             :class="app.isDark ? 'hover:bg-slate-700/50 text-slate-300' : 'hover:bg-slate-200/80 text-slate-700'"
             :style="{ paddingLeft: (depth * 16 + 8) + 'px' }"
         >
-            <!-- 展开箭头 / 文件图标 -->
-            <span v-if="node.is_dir" class="w-4 text-center transition-transform" :class="{ 'rotate-90': expanded }">
+            <!-- 同一列：目录箭头 / 文件图标（左对齐） -->
+            <button
+                v-if="node.is_dir"
+                type="button"
+                @click.stop="toggle"
+                class="w-4 flex items-center justify-start transition-transform"
+                :class="{ 'rotate-90': expanded }"
+                :title="expanded ? '收起目录' : '展开目录'"
+            >
                 <svg class="w-3 h-3 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                 </svg>
-            </span>
-            <span v-if="node.is_dir" class="text-xs">{{ expanded ? '📂' : '📁' }}</span>
-            <span v-else class="w-4"></span>
-            <span v-if="!node.is_dir" class="text-xs">{{ fileIcon(node.name) }}</span>
+            </button>
+            <span v-else class="w-4 text-xs leading-none flex items-center justify-start">{{ fileIcon(node.name) }}</span>
 
-            <span class="truncate flex-1" :title="node.name">{{ node.name }}</span>
+            <span
+                v-if="node.is_dir"
+                @click.stop="handleDirCd"
+                class="truncate flex-1 hover:underline font-semibold"
+                :title="node.name"
+            >{{ node.name }}</span>
+            <span
+                v-else
+                class="truncate flex-1 font-normal"
+                :title="node.name"
+            >{{ node.name }}</span>
         </div>
 
         <!-- 子节点 -->
