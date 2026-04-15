@@ -17,10 +17,15 @@ import (
 var webEmbed embed.FS
 
 func main() {
+	addr := flag.String("addr", "", "监听地址，格式为 host:port，例如 127.0.0.1:3100")
 	code := flag.String("code", "", "邀请码")
 	flag.Parse()
 
 	config.Init()
+
+	if *addr != "" {
+		config.SetAddr(*addr)
+	}
 
 	if *code != "" {
 		config.SetInviteCode(*code)
@@ -60,10 +65,10 @@ func main() {
 	router.Setup(r, webFS)
 
 	// 启动服务
-	addr := fmt.Sprintf("0.0.0.0:%d", config.Cfg.Server.Port)
-	log.Printf("CCWT 服务启动: http://%s", addr)
+	bindAddr := fmt.Sprintf("%s:%d", config.Cfg.Server.Host, config.Cfg.Server.Port)
+	log.Printf("CCWT 服务启动: http://%s", bindAddr)
 	log.Printf("数据目录: %s", config.DataDir())
-	if err := r.Run(addr); err != nil {
+	if err := r.Run(bindAddr); err != nil {
 		log.Fatalf("服务启动失败: %v", err)
 	}
 }

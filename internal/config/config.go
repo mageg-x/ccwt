@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"sync"
@@ -23,9 +24,9 @@ type AppConfig struct {
 }
 
 type ServerConfig struct {
-	Port     int    `mapstructure:"port"`
-	DataDir  string `mapstructure:"data_dir"`
-	LogLevel string `mapstructure:"log_level"`
+	Host    string `mapstructure:"host"`
+	Port    int    `mapstructure:"port"`
+	DataDir string `mapstructure:"data_dir"`
 }
 
 type JWTConfig struct {
@@ -82,12 +83,25 @@ func SetInviteCode(code string) {
 	}
 }
 
+// SetAddr 设置监听地址（命令行参数优先）
+func SetAddr(addr string) {
+	if Cfg != nil {
+		var host string
+		var port int
+		if _, err := fmt.Sscanf(addr, "%[^:]:%d", &host, &port); err == nil {
+			Cfg.Server.Host = host
+			Cfg.Server.Port = port
+		}
+	}
+}
+
 // Init 初始化配置
 func Init() {
 	once.Do(func() {
 		Cfg = &AppConfig{}
 
 		// 默认值
+		viper.SetDefault("server.host", "0.0.0.0")
 		viper.SetDefault("server.port", 3000)
 		viper.SetDefault("server.data_dir", "")
 		viper.SetDefault("server.log_level", "info")

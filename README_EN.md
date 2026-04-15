@@ -95,6 +95,9 @@ chmod +x ccwt
 
 # Start directly (default port 3000)
 ./ccwt
+
+# Specify IP and port to start
+./ccwt -addr=127.0.0.1:3100
 ```
 
 ### Enable Registration (Optional)
