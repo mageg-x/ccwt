@@ -93,25 +93,76 @@ html, body, #app {
 
 * {
     scrollbar-width: thin;
-    scrollbar-color: #475569 transparent;
+    scrollbar-color: #3b82f6 rgba(15, 23, 42, 0.18);
 }
 
 *::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+    width: 4px;
+    height: 4px;
 }
 
 *::-webkit-scrollbar-track {
-    background: transparent;
+    background: linear-gradient(180deg, rgba(59, 130, 246, 0.1), rgba(37, 99, 235, 0.03));
+    border-radius: 999px;
 }
 
 *::-webkit-scrollbar-thumb {
-    background: #475569;
-    border-radius: 3px;
+    background: linear-gradient(180deg, #93c5fd 0%, #3b82f6 55%, #1d4ed8 100%);
+    border-radius: 999px;
+    box-shadow: 0 0 0 1px rgba(147, 197, 253, 0.22), 0 0 8px rgba(59, 130, 246, 0.35);
 }
 
-.xterm-viewport {
+*::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, #bfdbfe 0%, #60a5fa 50%, #2563eb 100%);
+}
+
+*::-webkit-scrollbar-thumb:active {
+    background: linear-gradient(180deg, #60a5fa 0%, #2563eb 55%, #1e40af 100%);
+}
+
+.xterm .xterm-viewport {
     scrollbar-width: thin;
+    scrollbar-color: #3b82f6 rgba(15, 23, 42, 0.16);
+}
+
+.xterm .xterm-viewport::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+}
+
+.xterm .xterm-viewport::-webkit-scrollbar-track {
+    background: linear-gradient(180deg, rgba(59, 130, 246, 0.1), rgba(37, 99, 235, 0.03));
+    border-radius: 999px;
+}
+
+.xterm .xterm-viewport::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #93c5fd 0%, #3b82f6 55%, #1d4ed8 100%);
+    border-radius: 999px;
+}
+
+.xterm .xterm-viewport::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, #bfdbfe 0%, #60a5fa 50%, #2563eb 100%);
+}
+
+.xterm .xterm-viewport::-webkit-scrollbar-thumb:active {
+    background: linear-gradient(180deg, #60a5fa 0%, #2563eb 55%, #1e40af 100%);
+}
+
+.xterm .xterm-scrollable-element > .scrollbar.vertical {
+    width: 4px !important;
+}
+
+.xterm .xterm-scrollable-element > .scrollbar.horizontal {
+    height: 4px !important;
+}
+
+.xterm .xterm-scrollable-element > .scrollbar > .slider {
+    border-radius: 999px !important;
+    background: linear-gradient(180deg, #93c5fd 0%, #3b82f6 55%, #1d4ed8 100%) !important;
+}
+
+.xterm .xterm-scrollable-element > .scrollbar > .slider:hover {
+    background: linear-gradient(180deg, #bfdbfe 0%, #60a5fa 50%, #2563eb 100%) !important;
 }
 
 .xterm {

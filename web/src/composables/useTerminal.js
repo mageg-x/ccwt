@@ -52,7 +52,7 @@ const THEME_PRESETS = {
         brightWhite: '#f8fafc',
     },
     light: {
-        background: '#ffffff',
+        background: '#e2e8f0',
         foreground: '#1e293b',
         cursor: '#6366f1',
         selectionBackground: '#dbeafe',
@@ -63,7 +63,8 @@ const THEME_PRESETS = {
         blue: '#2563eb',
         magenta: '#9333ea',
         cyan: '#0891b2',
-        white: '#f8fafc',
+        // 避免 ANSI white 在浅色背景下几乎不可见
+        white: '#334155',
         brightBlack: '#64748b',
         brightRed: '#ef4444',
         brightGreen: '#22c55e',
@@ -111,6 +112,22 @@ export function useTerminal(containerRef, { onData, onResize, theme = 'dark' } =
     let lastManualPasteText = ''
     let lastManualPasteAt = 0
 
+    const MIN_FIT_WIDTH = 80
+    const MIN_FIT_HEIGHT = 48
+
+    function canFitNow() {
+        const el = containerRef.value
+        if (!el) return false
+        const rect = el.getBoundingClientRect()
+        return rect.width >= MIN_FIT_WIDTH && rect.height >= MIN_FIT_HEIGHT
+    }
+
+    function safeFit() {
+        if (!canFitNow()) return false
+        fitAddon.value?.fit()
+        return true
+    }
+
     function emitPastedText(text) {
         if (!text) return
         const now = Date.now()
@@ -139,7 +156,9 @@ export function useTerminal(containerRef, { onData, onResize, theme = 'dark' } =
             fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', Menlo, Monaco, monospace",
             lineHeight: 1.2,
             scrollback: 10000,
-            allowTransparency: true,
+            allowTransparency: false,
+            // 强制最低对比度，避免浅色主题下白字/浅色字不可读
+            minimumContrastRatio: 7,
             theme: resolveTheme(currentTheme),
             allowProposedApi: true,
         })
@@ -201,7 +220,7 @@ export function useTerminal(containerRef, { onData, onResize, theme = 'dark' } =
         if (!containerRef.value || term.value) return
         const t = createTerminal()
         t.open(containerRef.value)
-        fitAddon.value.fit()
+        safeFit()
 
         pasteHandler = (e) => {
             const text = e.clipboardData?.getData('text/plain') || e.clipboardData?.getData('text') || ''
@@ -214,7 +233,7 @@ export function useTerminal(containerRef, { onData, onResize, theme = 'dark' } =
         containerRef.value.addEventListener('paste', pasteHandler)
 
         resizeObs = new ResizeObserver(() => {
-            fitAddon.value?.fit()
+            safeFit()
         })
         resizeObs.observe(containerRef.value)
     }
@@ -224,7 +243,7 @@ export function useTerminal(containerRef, { onData, onResize, theme = 'dark' } =
     }
 
     function fit() {
-        fitAddon.value?.fit()
+        safeFit()
     }
 
     function focus() {

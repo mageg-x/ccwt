@@ -1,9 +1,11 @@
 <script setup>
 import { useAppStore } from '../../stores/app'
 import { useTerminalStore } from '../../stores/terminal'
+import { useDialogStore } from '../../stores/dialog'
 
 const app = useAppStore()
 const termStore = useTerminalStore()
+const dialog = useDialogStore()
 const emit = defineEmits(['newTab'])
 
 function closeTab(e, id) {
@@ -11,9 +13,14 @@ function closeTab(e, id) {
     termStore.removeTab(id)
 }
 
-function dblClick(tab) {
-    const name = prompt('终端名称:', tab.name)
-    if (name) termStore.renameTab(tab.id, name)
+async function dblClick(tab) {
+    const name = await dialog.prompt('请输入终端名称', {
+        title: '重命名终端',
+        defaultValue: tab.name,
+        placeholder: '终端名称',
+        okText: '保存',
+    })
+    if (name && name.trim()) termStore.renameTab(tab.id, name.trim())
 }
 </script>
 

@@ -14,8 +14,6 @@ export const useAppStore = defineStore('app', () => {
         const saved = localStorage.getItem('ccwt-theme')
         if (saved) {
             theme.value = saved
-        } else if (window.matchMedia('(prefers-color-scheme: light)').matches) {
-            theme.value = 'light'
         }
         if (isMobile.value) {
             sidebarOpen.value = false

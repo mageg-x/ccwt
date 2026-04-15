@@ -2,10 +2,12 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAppStore } from '../stores/app'
+import { useDialogStore } from '../stores/dialog'
 import * as systemApi from '../api/system'
 
 const router = useRouter()
 const app = useAppStore()
+const dialog = useDialogStore()
 const users = ref([])
 const loading = ref(true)
 
@@ -27,22 +29,30 @@ async function loadUsers() {
 
 async function toggleRole(user) {
     const newRole = user.role === 'admin' ? 'user' : 'admin'
-    if (!confirm(`确定将 ${user.username} 的角色改为 ${newRole}？`)) return
+    const ok = await dialog.confirm(`确定将 ${user.username} 的角色改为 ${newRole}？`, {
+        title: '确认修改角色',
+        okText: '确认修改',
+    })
+    if (!ok) return
     try {
         await systemApi.updateRole(user.id, newRole)
         await loadUsers()
     } catch (e) {
-        alert(e.response?.data?.error || '操作失败')
+        await dialog.alert(e.response?.data?.error || '操作失败', { title: '操作失败' })
     }
 }
 
 async function delUser(user) {
-    if (!confirm(`确定删除用户 ${user.username}？此操作不可恢复。`)) return
+    const ok = await dialog.confirm(`确定删除用户 ${user.username}？此操作不可恢复。`, {
+        title: '危险操作确认',
+        okText: '确认删除',
+    })
+    if (!ok) return
     try {
         await systemApi.deleteUser(user.id)
         await loadUsers()
     } catch (e) {
-        alert(e.response?.data?.error || '删除失败')
+        await dialog.alert(e.response?.data?.error || '删除失败', { title: '删除失败' })
     }
 }
 </script>

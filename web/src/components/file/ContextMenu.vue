@@ -1,6 +1,7 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { onMounted, onUnmounted } from 'vue'
 import { useAppStore } from '../../stores/app'
+import { useDialogStore } from '../../stores/dialog'
 import { useFileStore } from '../../stores/file'
 import * as fileApi from '../../api/file'
 
@@ -11,6 +12,7 @@ const props = defineProps({
 })
 const emit = defineEmits(['close'])
 const app = useAppStore()
+const dialog = useDialogStore()
 const fileStore = useFileStore()
 
 function copyPath() {
@@ -19,44 +21,86 @@ function copyPath() {
 }
 
 async function newFile() {
-    const name = prompt('文件名:')
-    if (!name) return
-    const path = props.node.is_dir ? `${props.node.path}/${name}` : `${props.node.path.replace(/\/[^/]+$/, '')}/${name}`
-    await fileApi.writeFile(path, '')
-    fileStore.loadTree()
-    emit('close')
+    const name = await dialog.prompt('请输入文件名', {
+        title: '新建文件',
+        placeholder: '例如: notes.md',
+        okText: '创建',
+    })
+    if (!name || !name.trim()) return
+    const cleanName = name.trim()
+    const path = props.node.is_dir ? `${props.node.path}/${cleanName}` : `${props.node.path.replace(/\/[^/]+$/, '')}/${cleanName}`
+    try {
+        await fileApi.writeFile(path, '')
+        fileStore.loadTree()
+        emit('close')
+    } catch (e) {
+        await dialog.alert(e.response?.data?.error || '创建文件失败', { title: '操作失败' })
+    }
 }
 
 async function newFolder() {
-    const name = prompt('文件夹名:')
-    if (!name) return
-    const path = props.node.is_dir ? `${props.node.path}/${name}` : `${props.node.path.replace(/\/[^/]+$/, '')}/${name}`
-    await fileApi.mkdir(path)
-    fileStore.loadTree()
-    emit('close')
+    const name = await dialog.prompt('请输入文件夹名', {
+        title: '新建文件夹',
+        placeholder: '例如: docs',
+        okText: '创建',
+    })
+    if (!name || !name.trim()) return
+    const cleanName = name.trim()
+    const path = props.node.is_dir ? `${props.node.path}/${cleanName}` : `${props.node.path.replace(/\/[^/]+$/, '')}/${cleanName}`
+    try {
+        await fileApi.mkdir(path)
+        fileStore.loadTree()
+        emit('close')
+    } catch (e) {
+        await dialog.alert(e.response?.data?.error || '创建文件夹失败', { title: '操作失败' })
+    }
 }
 
 async function rename() {
-    const name = prompt('新名称:', props.node.name)
-    if (!name || name === props.node.name) return
+    const name = await dialog.prompt('请输入新名称', {
+        title: '重命名',
+        defaultValue: props.node.name,
+        placeholder: '新名称',
+        okText: '保存',
+    })
+    if (!name || !name.trim()) return
+    const cleanName = name.trim()
+    if (cleanName === props.node.name) return
     const parts = props.node.path.split('/')
-    parts[parts.length - 1] = name
-    await fileApi.renameFile(props.node.path, parts.join('/'))
-    fileStore.loadTree()
-    emit('close')
+    parts[parts.length - 1] = cleanName
+    try {
+        await fileApi.renameFile(props.node.path, parts.join('/'))
+        fileStore.loadTree()
+        emit('close')
+    } catch (e) {
+        await dialog.alert(e.response?.data?.error || '重命名失败', { title: '操作失败' })
+    }
 }
 
 async function del() {
-    if (!confirm(`确定删除 ${props.node.name}？`)) return
-    await fileApi.deleteFile(props.node.path)
-    fileStore.loadTree()
-    emit('close')
+    const ok = await dialog.confirm(`确定删除 ${props.node.name}？`, {
+        title: '确认删除',
+        okText: '删除',
+    })
+    if (!ok) return
+    try {
+        await fileApi.deleteFile(props.node.path)
+        fileStore.loadTree()
+        emit('close')
+    } catch (e) {
+        await dialog.alert(e.response?.data?.error || '删除失败', { title: '操作失败' })
+    }
 }
 
 function download() {
-    if (!props.node.is_dir) {
-        window.open(fileApi.downloadUrl(props.node.path), '_blank')
-    }
+    const link = document.createElement('a')
+    link.href = fileApi.downloadUrl(props.node.path)
+    link.style.display = 'none'
+    // 通过 download 属性触发下载行为，避免打开新窗口预览
+    link.download = props.node.is_dir ? `${props.node.name}.zip` : props.node.name
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
     emit('close')
 }
 
@@ -95,7 +139,7 @@ onUnmounted(() => {
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
             复制路径
         </button>
-        <button v-if="!node.is_dir" @click="download" class="w-full text-left px-4 py-2 text-sm hover:bg-indigo-500/20 transition-colors flex items-center gap-2">
+        <button @click="download" class="w-full text-left px-4 py-2 text-sm hover:bg-indigo-500/20 transition-colors flex items-center gap-2">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
             下载
         </button>

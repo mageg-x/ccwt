@@ -44,8 +44,7 @@ type ProxyConfig struct {
 }
 
 type VoiceConfig struct {
-	ModelPath string `mapstructure:"model_path"`
-	Enabled   bool   `mapstructure:"enabled"`
+	Enabled bool `mapstructure:"enabled"`
 }
 
 // DataDir 获取数据根目录
@@ -98,8 +97,7 @@ func Init() {
 		viper.SetDefault("register.open", true)
 		viper.SetDefault("register.invite_code", "")
 		viper.SetDefault("proxy.port", 1080)
-		viper.SetDefault("voice.enabled", false)
-		viper.SetDefault("voice.model_path", "")
+		viper.SetDefault("voice.enabled", true)
 
 		// 环境变量前缀
 		viper.SetEnvPrefix("CCWT")
@@ -117,7 +115,6 @@ func Init() {
 
 		// 确保数据目录存在
 		os.MkdirAll(filepath.Join(DataDir(), "users"), 0755)
-		os.MkdirAll(filepath.Join(DataDir(), "models"), 0755)
 		os.MkdirAll(filepath.Join(DataDir(), "logs"), 0755)
 	})
 }

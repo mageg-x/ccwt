@@ -16,28 +16,41 @@ type ProxyManager struct {
 	running  bool
 	listener net.Listener
 	cancel   context.CancelFunc
+	host     string
+	port     int
 	mu       sync.Mutex
 }
 
 var Proxy = &ProxyManager{}
 
 // Status 获取代理状态
-func (p *ProxyManager) Status() (bool, string) {
+func (p *ProxyManager) Status() (bool, string, string, int) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if p.running && p.listener != nil {
-		return true, p.listener.Addr().String()
+		return true, p.listener.Addr().String(), p.host, p.port
 	}
-	return false, ""
+	return false, "", "", 0
 }
 
 // Start 启动 SOCKS5 代理
-func (p *ProxyManager) Start() error {
+func (p *ProxyManager) Start(host string, port int) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
 	if p.running {
 		return fmt.Errorf("代理已在运行")
+	}
+
+	if host == "" {
+		host = "0.0.0.0"
+	}
+
+	if port <= 0 {
+		port = config.Cfg.Proxy.Port
+	}
+	if port < 1 || port > 65535 {
+		return fmt.Errorf("端口范围无效: %d", port)
 	}
 
 	conf := &socks5.Config{}
@@ -46,7 +59,7 @@ func (p *ProxyManager) Start() error {
 		return fmt.Errorf("创建SOCKS5服务失败: %v", err)
 	}
 
-	addr := fmt.Sprintf("0.0.0.0:%d", config.Cfg.Proxy.Port)
+	addr := fmt.Sprintf("0.0.0.0:%d", port)
 	ln, err := net.Listen("tcp", addr)
 	if err != nil {
 		return fmt.Errorf("监听端口失败: %v", err)
@@ -56,6 +69,8 @@ func (p *ProxyManager) Start() error {
 	p.listener = ln
 	p.cancel = cancel
 	p.running = true
+	p.host = host
+	p.port = port
 
 	go func() {
 		log.Printf("SOCKS5 代理启动: %s", addr)
@@ -69,6 +84,8 @@ func (p *ProxyManager) Start() error {
 		}
 		p.mu.Lock()
 		p.running = false
+		p.host = ""
+		p.port = 0
 		p.mu.Unlock()
 	}()
 
@@ -91,6 +108,8 @@ func (p *ProxyManager) Stop() error {
 		p.listener.Close()
 	}
 	p.running = false
+	p.host = ""
+	p.port = 0
 	log.Printf("SOCKS5 代理已停止")
 	return nil
 }

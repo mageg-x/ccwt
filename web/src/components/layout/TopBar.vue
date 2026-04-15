@@ -3,12 +3,14 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAppStore } from '../../stores/app'
 import { useAuthStore } from '../../stores/auth'
+import { useTerminalStore } from '../../stores/terminal'
 import VoiceInput from '../VoiceInput.vue'
 import ProxyPanel from '../ProxyPanel.vue'
 
 const router = useRouter()
 const app = useAppStore()
 const auth = useAuthStore()
+const termStore = useTerminalStore()
 
 const showVoice = ref(false)
 const showProxy = ref(false)
@@ -17,6 +19,7 @@ const showUserMenu = ref(false)
 const emit = defineEmits(['voiceResult'])
 
 async function doLogout() {
+    termStore.reset('anonymous')
     await auth.logout()
     router.push('/login')
 }
@@ -35,8 +38,7 @@ async function doLogout() {
 
         <!-- Logo -->
         <div class="hidden sm:flex items-center gap-2">
-            <span class="inline-flex items-center justify-center w-7 h-7 rounded-lg ring-1 text-xs font-bold"
-                :class="app.isDark ? 'bg-cyan-400/15 text-cyan-300 ring-cyan-300/30' : 'bg-cyan-100 text-cyan-700 ring-cyan-300/60'">C</span>
+            <img src="/src/assets/imgs/logo.png" alt="CCWT Logo" class="w-7 h-7 object-contain" />
             <span class="font-semibold tracking-[0.08em]"
                 :class="app.isDark ? 'text-slate-100/95' : 'text-slate-800'">CCWT</span>
         </div>

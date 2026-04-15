@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/ccwt/ccwt/internal/config"
@@ -16,6 +17,31 @@ import (
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
 )
+
+func ensureUserBootstrapFiles(username string) {
+	userHome := config.UserDir(username)
+	files := map[string]string{
+		filepath.Join(userHome, ".bashrc"): `# ~/.bashrc (CCWT user scope)
+# User custom shell init for CCWT terminal.
+# Example:
+# export PATH="$HOME/bin:$PATH"
+`,
+		filepath.Join(userHome, ".profile"): `# ~/.profile (CCWT user scope)
+# Load interactive bash settings when applicable.
+if [ -n "$BASH_VERSION" ] && [ -f "$HOME/.bashrc" ]; then
+  . "$HOME/.bashrc"
+fi
+`,
+	}
+
+	for path, content := range files {
+		if _, err := os.Stat(path); os.IsNotExist(err) {
+			if werr := os.WriteFile(path, []byte(content), 0600); werr != nil {
+				log.Printf("创建用户初始化脚本失败: user=%s file=%s err=%v", username, path, werr)
+			}
+		}
+	}
+}
 
 // Register 用户注册
 func Register(c *gin.Context) {
@@ -71,6 +97,7 @@ func Register(c *gin.Context) {
 			log.Printf("Register 创建用户目录失败: user=%s dir=%s err=%v", req.Username, d, err)
 		}
 	}
+	ensureUserBootstrapFiles(req.Username)
 
 	// 自动登录
 	token, _ := middleware.GenToken(uid, req.Username, role)
@@ -113,6 +140,9 @@ func Login(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "用户名或密码错误"})
 		return
 	}
+
+	// 旧用户补齐初始化脚本，避免历史账户缺失 ~/.bashrc ~/.profile
+	ensureUserBootstrapFiles(user.Username)
 
 	token, _ := middleware.GenToken(user.ID, user.Username, user.Role)
 

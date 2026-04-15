@@ -18,6 +18,8 @@ const isActive = computed(() => termStore.activeId === props.tabId)
 let ws = null
 let closed = false
 let refreshTimer = null
+let activateRaf = null
+let activateFallbackTimer = null
 
 function scheduleTreeRefresh() {
     if (refreshTimer) clearTimeout(refreshTimer)
@@ -40,7 +42,8 @@ const { term, mount, write, fit, focus } = useTerminal(containerRef, {
             ws.send(JSON.stringify({ type: 'resize', rows, cols }))
         }
     },
-    theme: computed(() => app.theme),
+    // 终端优先 dark/shell，避免浅色主题下 CLI 配色可读性问题
+    theme: computed(() => app.theme === 'light' ? 'dark' : app.theme),
 })
 
 function connect() {
@@ -96,28 +99,33 @@ onMounted(async () => {
 onUnmounted(() => {
     closed = true
     if (refreshTimer) clearTimeout(refreshTimer)
+    if (activateRaf) cancelAnimationFrame(activateRaf)
+    if (activateFallbackTimer) clearTimeout(activateFallbackTimer)
     ws?.close()
 })
 
+function syncActiveTerminal() {
+    if (!isActive.value) return
+    fit()
+    focus()
+}
+
 watch(isActive, (active) => {
-    if (active) {
-        nextTick(() => {
-            fit()
-            focus()
-            const rows = term.value?.rows || 0
-            if (rows > 0) term.value?.refresh(0, rows - 1)
-            requestAnimationFrame(() => {
-                fit()
-                const r = term.value?.rows || 0
-                if (r > 0) term.value?.refresh(0, r - 1)
-            })
-            setTimeout(() => {
-                fit()
-                const r = term.value?.rows || 0
-                if (r > 0) term.value?.refresh(0, r - 1)
-            }, 60)
+    if (!active) return
+    if (activateRaf) cancelAnimationFrame(activateRaf)
+    if (activateFallbackTimer) clearTimeout(activateFallbackTimer)
+
+    nextTick(() => {
+        activateRaf = requestAnimationFrame(() => {
+            syncActiveTerminal()
+            activateRaf = null
         })
-    }
+        // 某些浏览器在标签切换时 RAF 可能延后，补一次轻量兜底
+        activateFallbackTimer = setTimeout(() => {
+            syncActiveTerminal()
+            activateFallbackTimer = null
+        }, 80)
+    })
 })
 
 defineExpose({ write, focus, fit })

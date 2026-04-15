@@ -10,45 +10,167 @@ const recording = ref(false)
 const processing = ref(false)
 const error = ref('')
 const resultText = ref('')
-let mediaRecorder = null
-let audioChunks = []
+const backendAvailable = ref(false)
+const backendReason = ref('')
+const engineLabel = ref('')
 
-// 尝试使用 Web Speech API
-const hasSpeechAPI = ref('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)
+let mediaStream = null
+let audioContext = null
+let sourceNode = null
+let processorNode = null
+let silentGainNode = null
+let inputSampleRate = 48000
+let pcmChunks = []
+
+async function fetchVoiceStatus() {
+    try {
+        const { data } = await voiceApi.getStatus()
+        backendAvailable.value = !!data?.available
+        backendReason.value = data?.reason || ''
+    } catch {
+        backendAvailable.value = false
+        backendReason.value = 'status.request.failed'
+    }
+}
 
 async function startRecording() {
     error.value = ''
     resultText.value = ''
 
-    // 优先使用 Web Speech API
-    if (hasSpeechAPI.value) {
-        startSpeechRecognition()
+    engineLabel.value = '百度在线识别'
+    if (!backendAvailable.value) {
+        const reasonMap = {
+            'voice.disabled': '后端语音识别未启用',
+            'baidu.token.failed': '百度鉴权失败或网络不可达',
+            'status.request.failed': '无法获取后端语音状态',
+        }
+        error.value = `后端语音不可用：${reasonMap[backendReason.value] || backendReason.value || '未知原因'}`
         return
     }
 
-    // 降级到录音 + 后端识别
     try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-        audioChunks = []
-        mediaRecorder = new MediaRecorder(stream)
-        mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data)
-        mediaRecorder.onstop = async () => {
-            stream.getTracks().forEach(t => t.stop())
-            const blob = new Blob(audioChunks, { type: 'audio/wav' })
-            await sendToBackend(blob)
+        mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true })
+        const AudioCtx = window.AudioContext || window.webkitAudioContext
+        audioContext = new AudioCtx()
+        inputSampleRate = audioContext.sampleRate || 48000
+        pcmChunks = []
+
+        sourceNode = audioContext.createMediaStreamSource(mediaStream)
+        processorNode = audioContext.createScriptProcessor(4096, 1, 1)
+        silentGainNode = audioContext.createGain()
+        silentGainNode.gain.value = 0
+
+        processorNode.onaudioprocess = (e) => {
+            if (!recording.value) return
+            const channel = e.inputBuffer.getChannelData(0)
+            pcmChunks.push(new Float32Array(channel))
         }
-        mediaRecorder.start()
+
+        sourceNode.connect(processorNode)
+        processorNode.connect(silentGainNode)
+        silentGainNode.connect(audioContext.destination)
+
         recording.value = true
     } catch (e) {
-        error.value = '无法访问麦克风: ' + e.message
+        error.value = '无法访问麦克风: ' + (e?.message || e)
+        cleanupRecorder()
     }
 }
 
-function stopRecording() {
-    if (mediaRecorder?.state === 'recording') {
-        mediaRecorder.stop()
+function cleanupRecorder() {
+    try { sourceNode?.disconnect() } catch {}
+    try { processorNode?.disconnect() } catch {}
+    try { silentGainNode?.disconnect() } catch {}
+    if (mediaStream) {
+        mediaStream.getTracks().forEach(t => t.stop())
     }
+    if (audioContext && audioContext.state !== 'closed') {
+        audioContext.close().catch(() => {})
+    }
+    sourceNode = null
+    processorNode = null
+    silentGainNode = null
+    mediaStream = null
+    audioContext = null
+}
+
+function mergePCM(chunks) {
+    let length = 0
+    for (const c of chunks) length += c.length
+    const merged = new Float32Array(length)
+    let offset = 0
+    for (const c of chunks) {
+        merged.set(c, offset)
+        offset += c.length
+    }
+    return merged
+}
+
+function downsamplePCM(buffer, fromRate, toRate) {
+    if (fromRate === toRate) return buffer
+    const ratio = fromRate / toRate
+    const newLength = Math.round(buffer.length / ratio)
+    const out = new Float32Array(newLength)
+    let offset = 0
+    for (let i = 0; i < newLength; i++) {
+        const start = Math.round(i * ratio)
+        const end = Math.round((i + 1) * ratio)
+        let sum = 0
+        let count = 0
+        for (let j = start; j < end && j < buffer.length; j++) {
+            sum += buffer[j]
+            count++
+        }
+        out[offset++] = count > 0 ? sum / count : 0
+    }
+    return out
+}
+
+function encodeWav16kMono(float32Data) {
+    const sampleRate = 16000
+    const bytesPerSample = 2
+    const blockAlign = bytesPerSample
+    const byteRate = sampleRate * blockAlign
+    const dataSize = float32Data.length * bytesPerSample
+    const buffer = new ArrayBuffer(44 + dataSize)
+    const view = new DataView(buffer)
+
+    let offset = 0
+    const writeString = (s) => {
+        for (let i = 0; i < s.length; i++) view.setUint8(offset++, s.charCodeAt(i))
+    }
+
+    writeString('RIFF')
+    view.setUint32(offset, 36 + dataSize, true); offset += 4
+    writeString('WAVE')
+    writeString('fmt ')
+    view.setUint32(offset, 16, true); offset += 4
+    view.setUint16(offset, 1, true); offset += 2
+    view.setUint16(offset, 1, true); offset += 2
+    view.setUint32(offset, sampleRate, true); offset += 4
+    view.setUint32(offset, byteRate, true); offset += 4
+    view.setUint16(offset, blockAlign, true); offset += 2
+    view.setUint16(offset, 16, true); offset += 2
+    writeString('data')
+    view.setUint32(offset, dataSize, true); offset += 4
+
+    for (let i = 0; i < float32Data.length; i++) {
+        const s = Math.max(-1, Math.min(1, float32Data[i]))
+        view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7fff, true)
+        offset += 2
+    }
+    return new Blob([buffer], { type: 'audio/wav' })
+}
+
+function stopRecording() {
+    if (!recording.value) return
     recording.value = false
+
+    const merged = mergePCM(pcmChunks)
+    const downsampled = downsamplePCM(merged, inputSampleRate, 16000)
+    const wavBlob = encodeWav16kMono(downsampled)
+    cleanupRecorder()
+    sendToBackend(wavBlob)
 }
 
 async function sendToBackend(blob) {
@@ -64,30 +186,11 @@ async function sendToBackend(blob) {
     }
 }
 
-function startSpeechRecognition() {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
-    const recognition = new SpeechRecognition()
-    recognition.lang = 'zh-CN'
-    recognition.interimResults = false
-    recognition.maxAlternatives = 1
+onMounted(fetchVoiceStatus)
 
-    recognition.onresult = (e) => {
-        const text = e.results[0][0].transcript
-        resultText.value = text
-        emit('result', text)
-        recording.value = false
-    }
-    recognition.onerror = (e) => {
-        error.value = '语音识别错误: ' + e.error
-        recording.value = false
-    }
-    recognition.onend = () => {
-        recording.value = false
-    }
-
-    recognition.start()
-    recording.value = true
-}
+onUnmounted(() => {
+    cleanupRecorder()
+})
 </script>
 
 <template>
@@ -118,6 +221,9 @@ function startSpeechRecognition() {
 
             <p class="text-center text-sm text-slate-400 mb-3">
                 {{ recording ? '正在录音，点击停止...' : processing ? '识别中...' : '点击开始录音' }}
+            </p>
+            <p v-if="engineLabel" class="text-center text-xs text-slate-500 mb-2">
+                当前引擎：{{ engineLabel }}
             </p>
 
             <!-- 波形动画 -->

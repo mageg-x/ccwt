@@ -1,6 +1,7 @@
 package service
 
 import (
+	"bytes"
 	"io"
 	"log"
 	"os"
@@ -111,6 +112,12 @@ func (r *RingBuffer) Bytes() []byte {
 	out := make([]byte, r.size)
 	copy(out, r.data[r.pos:])
 	copy(out[r.size-r.pos:], r.data[:r.pos])
+	// 环形覆盖后起始位置可能落在 ANSI 控制序列中间（如 "...[1;2m"），
+	// 刷新重连回放时会把残片当普通文本显示。对满缓冲场景从下一行起回放，
+	// 牺牲一小段最旧行内容，换取稳定可读的恢复效果。
+	if nl := bytes.IndexByte(out, '\n'); nl >= 0 && nl+1 < len(out) {
+		return append([]byte{}, out[nl+1:]...)
+	}
 	return out
 }
 
@@ -273,6 +280,8 @@ func buildBubblewrapCommand(username, shell string) (*exec.Cmd, error) {
 	args = appendRoBindIntoIfExists(args, "/etc/resolv.conf", "/etc/resolv.conf")
 	args = appendRoBindIntoIfExists(args, "/etc/hosts", "/etc/hosts")
 	args = appendRoBindIntoIfExists(args, "/etc/nsswitch.conf", "/etc/nsswitch.conf")
+	args = appendRoBindIntoIfExists(args, "/etc/manpath.config", "/etc/manpath.config")
+	args = appendRoBindIntoIfExists(args, "/etc/man_db.conf", "/etc/man_db.conf")
 
 	args = append(args, "--", shell, "--noprofile", "--rcfile", sbBashrc, "-i")
 
@@ -310,6 +319,11 @@ shopt -s histappend cmdhist checkwinsize
 mkdir -p "$HOME" "$__CCWT_WORKSPACE" >/dev/null 2>&1 || true
 touch "$HISTFILE" >/dev/null 2>&1 || true
 export PROMPT_COMMAND="history -a; history -n"
+
+# 兼容用户自定义初始化（如 nvm/goenv/sdkman 等）
+if [ -f "$HOME/.bashrc" ]; then
+  . "$HOME/.bashrc"
+fi
 
 # 彩色输出增强：目录、grep、分页器、提示符
 if command -v dircolors >/dev/null 2>&1; then
@@ -373,6 +387,26 @@ func ensureUserRuntimeDirs(username string) error {
 	historyFile := filepath.Join(config.UserDir(username), ".bash_history")
 	if _, err := os.Stat(historyFile); os.IsNotExist(err) {
 		if err := os.WriteFile(historyFile, []byte(""), 0600); err != nil {
+			return err
+		}
+	}
+	bashrc := filepath.Join(config.UserDir(username), ".bashrc")
+	if _, err := os.Stat(bashrc); os.IsNotExist(err) {
+		content := `# ~/.bashrc (CCWT user scope)
+# Add user-specific shell init here.
+`
+		if err := os.WriteFile(bashrc, []byte(content), 0600); err != nil {
+			return err
+		}
+	}
+	profile := filepath.Join(config.UserDir(username), ".profile")
+	if _, err := os.Stat(profile); os.IsNotExist(err) {
+		content := `# ~/.profile (CCWT user scope)
+if [ -n "$BASH_VERSION" ] && [ -f "$HOME/.bashrc" ]; then
+  . "$HOME/.bashrc"
+fi
+`
+		if err := os.WriteFile(profile, []byte(content), 0600); err != nil {
 			return err
 		}
 	}

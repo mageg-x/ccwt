@@ -2,18 +2,35 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 
 let tabCounter = 0
-const STORAGE_KEY = 'ccwt-terminal-state'
+const STORAGE_KEY_PREFIX = 'ccwt-terminal-state'
+const LEGACY_STORAGE_KEY = 'ccwt-terminal-state'
 
 export const useTerminalStore = defineStore('terminal', () => {
     const tabs = ref([])
     const activeId = ref(null)
+    const storageScope = ref('anonymous')
 
     const activeTab = computed(() => tabs.value.find(t => t.id === activeId.value))
     const hasInited = ref(false)
 
+    function getStorageKey() {
+        return `${STORAGE_KEY_PREFIX}:${storageScope.value}`
+    }
+
+    function clearState() {
+        tabs.value = []
+        activeId.value = null
+    }
+
+    function reset(scope = storageScope.value || 'anonymous') {
+        storageScope.value = scope || 'anonymous'
+        clearState()
+        persist()
+    }
+
     function persist() {
         localStorage.setItem(
-            STORAGE_KEY,
+            getStorageKey(),
             JSON.stringify({
                 tabs: tabs.value,
                 activeId: activeId.value,
@@ -21,11 +38,20 @@ export const useTerminalStore = defineStore('terminal', () => {
         )
     }
 
-    function init() {
-        if (hasInited.value) return
+    function init(scope = 'anonymous') {
+        const nextScope = scope || 'anonymous'
+        const scopeChanged = storageScope.value !== nextScope
+        if (hasInited.value && !scopeChanged) return
+
+        storageScope.value = nextScope
         hasInited.value = true
+        clearState()
+
+        // 清理历史全局 key，避免 A/B 用户串会话
+        localStorage.removeItem(LEGACY_STORAGE_KEY)
+
         try {
-            const raw = localStorage.getItem(STORAGE_KEY)
+            const raw = localStorage.getItem(getStorageKey())
             if (!raw) return
             const state = JSON.parse(raw)
             if (!Array.isArray(state?.tabs)) return
@@ -93,5 +119,5 @@ export const useTerminalStore = defineStore('terminal', () => {
         persist()
     }
 
-    return { tabs, activeId, activeTab, init, addTab, removeTab, renameTab, setSession }
+    return { tabs, activeId, activeTab, init, reset, addTab, removeTab, renameTab, setSession }
 })

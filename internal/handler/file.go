@@ -1,9 +1,13 @@
 package handler
 
 import (
+	"archive/zip"
+	"io"
 	"log"
 	"net/http"
+	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/ccwt/ccwt/internal/service"
 	"github.com/gin-gonic/gin"
@@ -157,15 +161,88 @@ func UploadFile(c *gin.Context) {
 // DownloadFile 下载文件
 func DownloadFile(c *gin.Context) {
 	username, _ := c.Get("username")
-	path := c.Query("path")
-	if path == "" {
+	relPath := c.Query("path")
+	if relPath == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "缺少 path 参数"})
 		return
 	}
-	full, err := service.SafePath(username.(string), path)
+	full, err := service.SafePath(username.(string), relPath)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "非法路径"})
 		return
 	}
-	c.File(full)
+
+	info, err := os.Stat(full)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "文件不存在"})
+		return
+	}
+
+	if !info.IsDir() {
+		name := info.Name()
+		c.Header("Content-Disposition", `attachment; filename="`+name+`"`)
+		c.Header("Content-Type", "application/octet-stream")
+		c.File(full)
+		return
+	}
+
+	base := strings.TrimSpace(filepath.Base(filepath.Clean(relPath)))
+	if base == "." || base == "/" || base == string(filepath.Separator) {
+		base = "workspace"
+	}
+
+	zipName := base + ".zip"
+	c.Header("Content-Disposition", `attachment; filename="`+zipName+`"`)
+	c.Header("Content-Type", "application/zip")
+
+	zw := zip.NewWriter(c.Writer)
+	defer zw.Close()
+
+	err = filepath.Walk(full, func(path string, fi os.FileInfo, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if path == full {
+			return nil
+		}
+
+		rel, err := filepath.Rel(full, path)
+		if err != nil {
+			return err
+		}
+		rel = filepath.ToSlash(rel)
+
+		hdr, err := zip.FileInfoHeader(fi)
+		if err != nil {
+			return err
+		}
+		hdr.Name = rel
+		if fi.IsDir() {
+			if !strings.HasSuffix(hdr.Name, "/") {
+				hdr.Name += "/"
+			}
+		} else {
+			hdr.Method = zip.Deflate
+		}
+
+		w, err := zw.CreateHeader(hdr)
+		if err != nil {
+			return err
+		}
+		if fi.IsDir() {
+			return nil
+		}
+
+		f, err := os.Open(path)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+
+		_, err = io.Copy(w, f)
+		return err
+	})
+	if err != nil {
+		log.Printf("DownloadFile 失败: user=%s path=%s err=%v", username, relPath, err)
+	}
 }

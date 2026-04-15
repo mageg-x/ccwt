@@ -12,7 +12,10 @@ const search = ref('')
 
 // 提取消息文本
 function getText(entry) {
+    if (!entry) return ''
     if (typeof entry.message === 'string') return entry.message
+    if (typeof entry.content === 'string') return entry.content
+    if (typeof entry.text === 'string') return entry.text
     if (entry.message?.content) {
         if (typeof entry.message.content === 'string') return entry.message.content
         if (Array.isArray(entry.message.content)) {
@@ -22,7 +25,9 @@ function getText(entry) {
                 .join('\n')
         }
     }
-    return JSON.stringify(entry.message, null, 2)
+    const fallback = entry.message ?? entry.content ?? entry
+    const asString = JSON.stringify(fallback, null, 2)
+    return typeof asString === 'string' ? asString : ''
 }
 
 function isUser(entry) {
@@ -30,26 +35,27 @@ function isUser(entry) {
 }
 
 function isCode(text) {
-    return text.includes('```')
+    return typeof text === 'string' && text.includes('```')
 }
 
 // 提取代码块
 function extractBlocks(text) {
+    const safeText = typeof text === 'string' ? text : ''
     const parts = []
     const regex = /```(\w*)\n([\s\S]*?)```/g
     let last = 0
     let match
-    while ((match = regex.exec(text)) !== null) {
+    while ((match = regex.exec(safeText)) !== null) {
         if (match.index > last) {
-            parts.push({ type: 'text', content: text.slice(last, match.index) })
+            parts.push({ type: 'text', content: safeText.slice(last, match.index) })
         }
         parts.push({ type: 'code', lang: match[1], content: match[2] })
         last = match.index + match[0].length
     }
-    if (last < text.length) {
-        parts.push({ type: 'text', content: text.slice(last) })
+    if (last < safeText.length) {
+        parts.push({ type: 'text', content: safeText.slice(last) })
     }
-    return parts.length ? parts : [{ type: 'text', content: text }]
+    return parts.length ? parts : [{ type: 'text', content: safeText }]
 }
 
 function copyCode(code) {
@@ -63,7 +69,10 @@ function doSearch() {
         return
     }
     const q = search.value.toLowerCase()
-    filtered.value = props.entries.filter(e => getText(e).toLowerCase().includes(q))
+    filtered.value = props.entries.filter((e) => {
+        const text = getText(e)
+        return text.toLowerCase().includes(q)
+    })
 }
 
 const displayEntries = ref(null)

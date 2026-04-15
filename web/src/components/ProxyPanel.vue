@@ -1,18 +1,26 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useAppStore } from '../stores/app'
+import { useDialogStore } from '../stores/dialog'
 import * as proxyApi from '../api/proxy'
 
 const emit = defineEmits(['close'])
 const app = useAppStore()
+const dialog = useDialogStore()
 const running = ref(false)
 const address = ref('')
+const ip = ref('127.0.0.1')
+const port = ref(1080)
 const loading = ref(false)
 
 async function fetchStatus() {
     const { data } = await proxyApi.getStatus()
     running.value = data.running
     address.value = data.address
+    ip.value = data.bind_host || data.client_ip || '127.0.0.1'
+    if (typeof data.port === 'number' && data.port > 0) {
+        port.value = data.port
+    }
 }
 
 async function toggle() {
@@ -21,18 +29,18 @@ async function toggle() {
         if (running.value) {
             await proxyApi.stop()
         } else {
-            await proxyApi.start()
+            await proxyApi.start(ip.value, port.value)
         }
         await fetchStatus()
     } catch (e) {
-        alert(e.response?.data?.error || '操作失败')
+        await dialog.alert(e.response?.data?.error || '操作失败', { title: '代理操作失败' })
     } finally {
         loading.value = false
     }
 }
 
 function copyAddr() {
-    navigator.clipboard.writeText(`socks5://${address.value}`)
+    navigator.clipboard.writeText(`socks5://${ip.value}:${port.value}`)
 }
 
 onMounted(fetchStatus)
@@ -59,6 +67,25 @@ onMounted(fetchStatus)
                 <span v-if="running && address" class="text-xs text-slate-400 ml-auto font-mono">{{ address }}</span>
             </div>
 
+            <div class="mb-4 p-3 rounded-xl space-y-3"
+                :class="app.isDark ? 'bg-slate-700/30' : 'bg-slate-100'">
+                <div class="text-xs font-medium" :class="app.isDark ? 'text-slate-300' : 'text-slate-600'">浏览器 SOCKS5 配置</div>
+                <div class="grid grid-cols-[72px_1fr] gap-2 items-center text-sm">
+                    <span class="text-slate-400">IP</span>
+                    <input v-model.trim="ip" :disabled="running || loading"
+                        class="px-2.5 py-1.5 rounded-lg border font-mono"
+                        :class="app.isDark
+                            ? 'bg-slate-900/60 border-slate-600 text-slate-200 focus:border-indigo-500'
+                            : 'bg-white border-slate-300 text-slate-700 focus:border-indigo-500'" />
+                    <span class="text-slate-400">端口</span>
+                    <input v-model.number="port" type="number" min="1" max="65535" :disabled="running || loading"
+                        class="px-2.5 py-1.5 rounded-lg border font-mono outline-none"
+                        :class="app.isDark
+                            ? 'bg-slate-900/60 border-slate-600 text-slate-200 focus:border-indigo-500'
+                            : 'bg-white border-slate-300 text-slate-700 focus:border-indigo-500'" />
+                </div>
+            </div>
+
             <!-- 操作 -->
             <div class="flex gap-3 mb-4">
                 <button @click="toggle" :disabled="loading"
@@ -78,13 +105,9 @@ onMounted(fetchStatus)
             <!-- 使用说明 -->
             <div class="text-xs space-y-2 p-3 rounded-xl"
                 :class="app.isDark ? 'bg-slate-900/50 text-slate-400' : 'bg-slate-50 text-slate-500'">
-                <p class="font-medium text-sm" :class="app.isDark ? 'text-slate-300' : 'text-slate-600'">认证流程：</p>
-                <ol class="list-decimal list-inside space-y-1">
-                    <li>启动代理后，在本地浏览器配置 SOCKS5 代理</li>
-                    <li>在终端中运行 <code class="px-1 py-0.5 rounded bg-slate-700/50">claude</code></li>
-                    <li>复制 OAuth 链接，在配置了代理的浏览器中打开</li>
-                    <li>完成授权后关闭代理</li>
-                </ol>
+                <p><span class="font-medium">IP：</span><code class="font-mono">{{ ip }}</code></p>
+                <p><span class="font-medium">端口：</span><code class="font-mono">{{ port }}</code></p>
+                <p>在浏览器代理设置中填入以上两项（SOCKS5）即可。</p>
             </div>
 
             <div class="flex justify-end mt-4">

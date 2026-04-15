@@ -58,6 +58,14 @@ func TerminalWS(c *gin.Context) {
 	rows := uint16(24)
 	cols := uint16(80)
 
+	// 会话归属校验：禁止跨用户复用 session_id
+	if sessID != "" {
+		if existing := service.Pty.Get(sessID); existing != nil && existing.UserName != claims.Username {
+			c.JSON(http.StatusForbidden, gin.H{"error": "无权访问该终端会话"})
+			return
+		}
+	}
+
 	// 获取或创建 PTY 会话
 	var sess *service.PtySession
 	if sessID != "" {

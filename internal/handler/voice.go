@@ -33,7 +33,9 @@ func VoiceRecognize(c *gin.Context) {
 
 // VoiceStatus 语音识别状态
 func VoiceStatus(c *gin.Context) {
+	available, reason := service.Voice.Status()
 	c.JSON(http.StatusOK, gin.H{
-		"available": service.Voice.IsAvailable(),
+		"available": available,
+		"reason":    reason,
 	})
 }
