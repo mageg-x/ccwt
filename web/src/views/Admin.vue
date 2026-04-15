@@ -1,10 +1,12 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useAppStore } from '../stores/app'
 import { useDialogStore } from '../stores/dialog'
 import * as systemApi from '../api/system'
 
+const { t } = useI18n()
 const router = useRouter()
 const app = useAppStore()
 const dialog = useDialogStore()
@@ -21,7 +23,7 @@ async function loadUsers() {
         const { data } = await systemApi.getUsers()
         users.value = data.users || []
     } catch (e) {
-        console.error('加载用户列表失败', e)
+        console.error(t('admin.loadFailed'), e)
     } finally {
         loading.value = false
     }
@@ -29,37 +31,37 @@ async function loadUsers() {
 
 async function toggleRole(user) {
     const newRole = user.role === 'admin' ? 'user' : 'admin'
-    const ok = await dialog.confirm(`确定将 ${user.username} 的角色改为 ${newRole}？`, {
-        title: '确认修改角色',
-        okText: '确认修改',
+    const roleLabel = newRole === 'admin' ? t('user.admin') : t('user.user')
+    const ok = await dialog.confirm(t('admin.confirmRoleChange', { username: user.username, role: roleLabel }), {
+        title: t('admin.confirmRoleChangeTitle'),
+        okText: t('common.ok'),
     })
     if (!ok) return
     try {
         await systemApi.updateRole(user.id, newRole)
         await loadUsers()
     } catch (e) {
-        await dialog.alert(e.response?.data?.error || '操作失败', { title: '操作失败' })
+        await dialog.alert(e.response?.data?.error || t('admin.roleChangeFailed'), { title: t('admin.roleChangeFailed') })
     }
 }
 
 async function delUser(user) {
-    const ok = await dialog.confirm(`确定删除用户 ${user.username}？此操作不可恢复。`, {
-        title: '危险操作确认',
-        okText: '确认删除',
+    const ok = await dialog.confirm(t('admin.confirmDelete', { username: user.username }), {
+        title: t('admin.deleteUserTitle'),
+        okText: t('common.delete'),
     })
     if (!ok) return
     try {
         await systemApi.deleteUser(user.id)
         await loadUsers()
     } catch (e) {
-        await dialog.alert(e.response?.data?.error || '删除失败', { title: '删除失败' })
+        await dialog.alert(e.response?.data?.error || t('admin.deleteFailed'), { title: t('admin.deleteFailed') })
     }
 }
 </script>
 
 <template>
     <div class="h-full flex flex-col" :class="app.isDark ? 'bg-slate-900 text-slate-200' : 'bg-white text-slate-800'">
-        <!-- 顶部栏 -->
         <header class="h-12 flex items-center px-4 gap-3 border-b shrink-0"
             :class="app.isDark ? 'bg-slate-800/80 border-slate-700/50' : 'bg-white border-slate-200'">
             <button @click="router.push('/')" class="p-2 rounded-lg hover:bg-slate-700/50 transition-colors">
@@ -67,17 +69,16 @@ async function delUser(user) {
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                 </svg>
             </button>
-            <h1 class="font-semibold">管理面板</h1>
+            <h1 class="font-semibold">{{ t('admin.title') }}</h1>
         </header>
 
-        <!-- 用户管理 -->
         <div class="flex-1 overflow-y-auto p-4 sm:p-6">
             <div class="max-w-4xl mx-auto">
                 <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
                     <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                     </svg>
-                    用户管理
+                    {{ t('admin.userManagement') }}
                 </h2>
 
                 <div v-if="loading" class="flex items-center justify-center py-12">
@@ -92,11 +93,11 @@ async function delUser(user) {
                     <table class="w-full">
                         <thead>
                             <tr :class="app.isDark ? 'bg-slate-800/50' : 'bg-slate-50'">
-                                <th class="text-left px-4 py-3 text-xs font-medium uppercase tracking-wider text-slate-400">ID</th>
-                                <th class="text-left px-4 py-3 text-xs font-medium uppercase tracking-wider text-slate-400">用户名</th>
-                                <th class="text-left px-4 py-3 text-xs font-medium uppercase tracking-wider text-slate-400">角色</th>
-                                <th class="text-left px-4 py-3 text-xs font-medium uppercase tracking-wider text-slate-400">注册时间</th>
-                                <th class="text-right px-4 py-3 text-xs font-medium uppercase tracking-wider text-slate-400">操作</th>
+                                <th class="text-left px-4 py-3 text-xs font-medium uppercase tracking-wider text-slate-400">{{ t('admin.id') }}</th>
+                                <th class="text-left px-4 py-3 text-xs font-medium uppercase tracking-wider text-slate-400">{{ t('admin.username') }}</th>
+                                <th class="text-left px-4 py-3 text-xs font-medium uppercase tracking-wider text-slate-400">{{ t('admin.role') }}</th>
+                                <th class="text-left px-4 py-3 text-xs font-medium uppercase tracking-wider text-slate-400">{{ t('admin.registeredAt') }}</th>
+                                <th class="text-right px-4 py-3 text-xs font-medium uppercase tracking-wider text-slate-400">{{ t('admin.actions') }}</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y" :class="app.isDark ? 'divide-slate-700/30' : 'divide-slate-100'">
@@ -117,7 +118,7 @@ async function delUser(user) {
                                         :class="user.role === 'admin'
                                             ? 'bg-amber-500/20 text-amber-400'
                                             : 'bg-slate-500/20 text-slate-400'">
-                                        {{ user.role }}
+                                        {{ user.role === 'admin' ? t('user.admin') : t('user.user') }}
                                     </span>
                                 </td>
                                 <td class="px-4 py-3 text-sm text-slate-400">{{ user.created_at }}</td>
@@ -126,11 +127,11 @@ async function delUser(user) {
                                         <button @click="toggleRole(user)"
                                             class="px-2.5 py-1 rounded-lg text-xs transition-colors"
                                             :class="app.isDark ? 'hover:bg-slate-700' : 'hover:bg-slate-200'">
-                                            {{ user.role === 'admin' ? '降为用户' : '升为管理员' }}
+                                            {{ user.role === 'admin' ? t('admin.demoteToUser') : t('admin.promoteToAdmin') }}
                                         </button>
                                         <button v-if="user.id !== 1" @click="delUser(user)"
                                             class="px-2.5 py-1 rounded-lg text-xs text-red-400 hover:bg-red-500/20 transition-colors">
-                                            删除
+                                            {{ t('common.delete') }}
                                         </button>
                                     </div>
                                 </td>

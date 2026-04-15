@@ -1,11 +1,13 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useAppStore } from '../stores/app'
 import { useDialogStore } from '../stores/dialog'
 import * as settingsApi from '../api/settings'
 import * as proxyApi from '../api/proxy'
 
+const { t } = useI18n()
 const router = useRouter()
 const app = useAppStore()
 const dialog = useDialogStore()
@@ -18,11 +20,11 @@ const proxyAddress = ref('')
 const proxyIP = ref('0.0.0.0')
 const proxyPort = ref(1080)
 
-const tabs = [
-    { key: 'voice', label: '语音识别', icon: 'M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z' },
-    { key: 'proxy', label: 'SOCKS5 代理', icon: 'M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9' },
-    { key: 'about', label: '关于', icon: 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
-]
+const tabs = computed(() => [
+    { key: 'voice', label: t('settings.tabs.voice'), icon: 'M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z' },
+    { key: 'proxy', label: t('settings.tabs.proxy'), icon: 'M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0 3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9' },
+    { key: 'about', label: t('settings.tabs.about'), icon: 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
+])
 
 async function loadSettings() {
     loading.value = true
@@ -34,7 +36,7 @@ async function loadSettings() {
         }
         settings.value = map
     } catch (e) {
-        console.error('加载设置失败', e)
+        console.error(t('settings.voice.loadFailed'), e)
     } finally {
         loading.value = false
     }
@@ -48,7 +50,7 @@ async function loadProxyStatus() {
         proxyIP.value = data.bind_host || settings.value['proxy.ip'] || '0.0.0.0'
         proxyPort.value = data.port || parseInt(settings.value['proxy.port']) || 1080
     } catch (e) {
-        console.error('获取代理状态失败', e)
+        console.error(t('settings.proxy.statusFailed'), e)
     }
 }
 
@@ -56,7 +58,7 @@ async function saveSetting(key, value) {
     try {
         await settingsApi.updateSetting(key, String(value))
     } catch (e) {
-        await dialog.alert(e.response?.data?.error || '保存失败', { title: '保存失败' })
+        await dialog.alert(e.response?.data?.error || t('common.saveFailed'), { title: t('common.saveFailed') })
     }
 }
 
@@ -71,13 +73,13 @@ async function toggleProxy() {
         try {
             await proxyApi.stop()
         } catch (e) {
-            await dialog.alert(e.response?.data?.error || '停止失败', { title: '停止失败' })
+            await dialog.alert(e.response?.data?.error || t('settings.proxy.stopFailed'), { title: t('settings.proxy.stopFailed') })
         }
     } else {
         try {
             await proxyApi.start(settings.value['proxy.ip'] || '0.0.0.0', proxyPort.value)
         } catch (e) {
-            await dialog.alert(e.response?.data?.error || '启动失败', { title: '启动失败' })
+            await dialog.alert(e.response?.data?.error || t('settings.proxy.startFailed'), { title: t('settings.proxy.startFailed') })
         }
     }
     await loadProxyStatus()
@@ -117,7 +119,7 @@ onMounted(() => {
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                 </svg>
             </button>
-            <h1 class="font-semibold">设置</h1>
+            <h1 class="font-semibold">{{ t('settings.title') }}</h1>
         </header>
 
         <div class="flex-1 overflow-y-auto p-4 sm:p-6">
@@ -148,8 +150,8 @@ onMounted(() => {
                         <div class="rounded-xl border p-4" :class="app.isDark ? 'border-slate-700/50 bg-slate-800/30' : 'border-slate-200 bg-slate-50'">
                             <div class="flex items-center justify-between mb-4">
                                 <div>
-                                    <h3 class="font-medium">语音识别开关</h3>
-                                    <p class="text-xs mt-1" :class="app.isDark ? 'text-slate-400' : 'text-slate-500'">启用后可用语音输入命令</p>
+                                    <h3 class="font-medium">{{ t('settings.voice.enable') }}</h3>
+                                    <p class="text-xs mt-1" :class="app.isDark ? 'text-slate-400' : 'text-slate-500'">{{ t('settings.voice.enableDesc') }}</p>
                                 </div>
                                 <button @click="toggleVoice"
                                     class="relative w-12 h-6 rounded-full transition-colors"
@@ -161,25 +163,26 @@ onMounted(() => {
                         </div>
 
                         <div class="rounded-xl border p-4" :class="app.isDark ? 'border-slate-700/50 bg-slate-800/30' : 'border-slate-200 bg-slate-50'">
-                            <h3 class="font-medium mb-4">百度语音 API 配置</h3>
+                            <h3 class="font-medium mb-4">{{ t('settings.voice.baiduConfig') }}</h3>
                             <p class="text-xs mb-4" :class="app.isDark ? 'text-slate-400' : 'text-slate-500'">
-                                请前往 <a href="https://console.bce.baidu.com/" target="_blank" class="text-indigo-400 hover:underline">百度智能云控制台</a> 创建语音应用，获取 App ID、API Key 和 Secret Key
+                                {{ t('settings.voice.baiduConfigTip', { link: '' }) }}
+                                <a href="https://console.bce.baidu.com/" target="_blank" class="text-indigo-400 hover:underline">{{ t('settings.voice.baiduConsole') }}</a>
                             </p>
                             <div class="space-y-3">
                                 <div>
-                                    <label class="block text-xs mb-1.5" :class="app.isDark ? 'text-slate-300' : 'text-slate-600'">App ID</label>
+                                    <label class="block text-xs mb-1.5" :class="app.isDark ? 'text-slate-300' : 'text-slate-600'">{{ t('settings.voice.appId') }}</label>
                                     <input type="text" v-model="settings['voice.app_id']"
                                         class="w-full px-3 py-2 rounded-lg border text-sm font-mono outline-none"
                                         :class="app.isDark ? 'bg-slate-900/60 border-slate-600 text-slate-200 focus:border-indigo-500' : 'bg-white border-slate-300 text-slate-700 focus:border-indigo-500'" />
                                 </div>
                                 <div>
-                                    <label class="block text-xs mb-1.5" :class="app.isDark ? 'text-slate-300' : 'text-slate-600'">API Key</label>
+                                    <label class="block text-xs mb-1.5" :class="app.isDark ? 'text-slate-300' : 'text-slate-600'">{{ t('settings.voice.apiKey') }}</label>
                                     <input type="text" v-model="settings['voice.api_key']"
                                         class="w-full px-3 py-2 rounded-lg border text-sm font-mono outline-none"
                                         :class="app.isDark ? 'bg-slate-900/60 border-slate-600 text-slate-200 focus:border-indigo-500' : 'bg-white border-slate-300 text-slate-700 focus:border-indigo-500'" />
                                 </div>
                                 <div>
-                                    <label class="block text-xs mb-1.5" :class="app.isDark ? 'text-slate-300' : 'text-slate-600'">Secret Key</label>
+                                    <label class="block text-xs mb-1.5" :class="app.isDark ? 'text-slate-300' : 'text-slate-600'">{{ t('settings.voice.secretKey') }}</label>
                                     <input type="password" v-model="settings['voice.secret']"
                                         class="w-full px-3 py-2 rounded-lg border text-sm font-mono outline-none"
                                         :class="app.isDark ? 'bg-slate-900/60 border-slate-600 text-slate-200 focus:border-indigo-500' : 'bg-white border-slate-300 text-slate-700 focus:border-indigo-500'" />
@@ -188,7 +191,7 @@ onMounted(() => {
                             <div class="flex justify-end mt-4">
                                 <button @click="saveVoiceConfig"
                                     class="px-4 py-2 rounded-lg text-sm bg-indigo-600 text-white hover:bg-indigo-500 transition-colors">
-                                    保存
+                                    {{ t('settings.voice.save') }}
                                 </button>
                             </div>
                         </div>
@@ -198,9 +201,9 @@ onMounted(() => {
                         <div class="rounded-xl border p-4" :class="app.isDark ? 'border-slate-700/50 bg-slate-800/30' : 'border-slate-200 bg-slate-50'">
                             <div class="flex items-center justify-between mb-4">
                                 <div>
-                                    <h3 class="font-medium">SOCKS5 代理服务</h3>
+                                    <h3 class="font-medium">{{ t('settings.proxy.title') }}</h3>
                                     <p class="text-xs mt-1" :class="app.isDark ? 'text-slate-400' : 'text-slate-500'">
-                                        {{ proxyRunning ? '运行中' : '已停止' }}
+                                        {{ proxyRunning ? t('settings.proxy.running') : t('settings.proxy.stopped') }}
                                         <span v-if="proxyRunning" class="ml-2 font-mono text-indigo-400">{{ proxyAddress }}</span>
                                     </p>
                                 </div>
@@ -214,39 +217,39 @@ onMounted(() => {
                         </div>
 
                         <div class="rounded-xl border p-4" :class="app.isDark ? 'border-slate-700/50 bg-slate-800/30' : 'border-slate-200 bg-slate-50'">
-                            <h3 class="font-medium mb-4">默认绑定配置</h3>
+                            <h3 class="font-medium mb-4">{{ t('settings.proxy.bindConfig') }}</h3>
                             <div class="flex items-center gap-3 flex-wrap">
                                 <div class="flex items-center gap-2">
-                                    <label class="text-xs whitespace-nowrap" :class="app.isDark ? 'text-slate-300' : 'text-slate-600'">IP</label>
+                                    <label class="text-xs whitespace-nowrap" :class="app.isDark ? 'text-slate-300' : 'text-slate-600'">{{ t('settings.proxy.ip') }}</label>
                                     <input type="text" v-model="proxyIP"
                                         class="w-28 px-2 py-1.5 rounded-lg border text-sm font-mono outline-none shrink-0"
                                         :class="app.isDark ? 'bg-slate-900/60 border-slate-600 text-slate-200 focus:border-indigo-500' : 'bg-white border-slate-300 text-slate-700 focus:border-indigo-500'" />
                                 </div>
                                 <div class="flex items-center gap-2">
-                                    <label class="text-xs whitespace-nowrap" :class="app.isDark ? 'text-slate-300' : 'text-slate-600'">端口</label>
+                                    <label class="text-xs whitespace-nowrap" :class="app.isDark ? 'text-slate-300' : 'text-slate-600'">{{ t('settings.proxy.port') }}</label>
                                     <input type="number" v-model.number="proxyPort" min="1" max="65535"
                                         class="w-20 px-2 py-1.5 rounded-lg border text-sm font-mono outline-none shrink-0"
                                         :class="app.isDark ? 'bg-slate-900/60 border-slate-600 text-slate-200 focus:border-indigo-500' : 'bg-white border-slate-300 text-slate-700 focus:border-indigo-500'" />
                                 </div>
                                 <button @click="saveProxyIP(); saveProxyPort()"
                                     class="ml-auto px-4 py-1.5 rounded-lg text-sm bg-indigo-600 text-white hover:bg-indigo-500 transition-colors shrink-0">
-                                    保存
+                                    {{ t('settings.proxy.save') }}
                                 </button>
                             </div>
                             <p class="text-xs mt-2" :class="app.isDark ? 'text-slate-500' : 'text-slate-400'">
-                                0.0.0.0 表示绑定所有网卡；127.0.0.1 仅允许本地连接
+                                {{ t('settings.proxy.bindTip') }}
                             </p>
                         </div>
 
                         <div v-if="proxyRunning" class="rounded-xl border p-4" :class="app.isDark ? 'border-slate-700/50 bg-slate-800/30' : 'border-slate-200 bg-slate-50'">
-                            <h3 class="font-medium mb-3">连接信息</h3>
+                            <h3 class="font-medium mb-3">{{ t('settings.proxy.connectionInfo') }}</h3>
                             <div class="flex items-center justify-between p-3 rounded-lg"
                                 :class="app.isDark ? 'bg-slate-900/50' : 'bg-slate-100'">
                                 <code class="font-mono text-sm text-indigo-400">socks5://{{ proxyIP === '0.0.0.0' ? '127.0.0.1' : proxyIP }}:{{ proxyPort }}</code>
                                 <button @click="copyProxyAddr"
                                     class="px-3 py-1.5 rounded-lg text-xs transition-colors"
                                     :class="app.isDark ? 'hover:bg-slate-700' : 'hover:bg-slate-200'">
-                                    复制
+                                    {{ t('settings.proxy.copy') }}
                                 </button>
                             </div>
                         </div>
@@ -259,35 +262,35 @@ onMounted(() => {
                             </div>
                             <h2 class="text-xl font-semibold mb-1">CCWT</h2>
                             <p class="text-sm" :class="app.isDark ? 'text-slate-400' : 'text-slate-500'">Claude Code Web Terminal</p>
-                            <p class="text-xs mt-2" :class="app.isDark ? 'text-slate-500' : 'text-slate-400'">版本 1.0.0</p>
+                            <p class="text-xs mt-2" :class="app.isDark ? 'text-slate-500' : 'text-slate-400'">{{ t('settings.about.version') }} 1.0.0</p>
                         </div>
 
                         <div class="rounded-xl border p-4" :class="app.isDark ? 'border-slate-700/50 bg-slate-800/30' : 'border-slate-200 bg-slate-50'">
-                            <h3 class="font-medium mb-3">功能说明</h3>
+                            <h3 class="font-medium mb-3">{{ t('settings.about.features') }}</h3>
                             <ul class="space-y-2 text-sm" :class="app.isDark ? 'text-slate-300' : 'text-slate-600'">
                                 <li class="flex items-start gap-2">
                                     <svg class="w-4 h-4 mt-0.5 text-green-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                                     </svg>
-                                    基于 Web 的 Claude Code 终端
+                                    {{ t('settings.about.webBasedTerminal') }}
                                 </li>
                                 <li class="flex items-start gap-2">
                                     <svg class="w-4 h-4 mt-0.5 text-green-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                                     </svg>
-                                    支持语音输入命令
+                                    {{ t('settings.about.voiceInput') }}
                                 </li>
                                 <li class="flex items-start gap-2">
                                     <svg class="w-4 h-4 mt-0.5 text-green-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                                     </svg>
-                                    内置 SOCKS5 代理
+                                    {{ t('settings.about.builtInProxy') }}
                                 </li>
                                 <li class="flex items-start gap-2">
                                     <svg class="w-4 h-4 mt-0.5 text-green-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                                     </svg>
-                                    文件管理和在线编辑
+                                    {{ t('settings.about.fileManagement') }}
                                 </li>
                             </ul>
                         </div>
