@@ -48,10 +48,35 @@ func migrate() {
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 		)`,
+		`CREATE TABLE IF NOT EXISTS settings (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			key TEXT UNIQUE NOT NULL,
+			value TEXT NOT NULL,
+			description TEXT,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		)`,
 	}
 	for _, ddl := range tables {
 		if _, err := DB.Exec(ddl); err != nil {
 			log.Fatalf("建表失败: %v", err)
 		}
+	}
+	seedSettings()
+}
+
+func seedSettings() {
+	settings := []struct {
+		key, value, desc string
+	}{
+		{"voice.enabled", "true", "是否启用语音识别功能"},
+		{"voice.app_id", "", "百度语音 App ID"},
+		{"voice.api_key", "", "百度语音 API Key"},
+		{"voice.secret", "", "百度语音 Secret Key"},
+		{"proxy.ip", "0.0.0.0", "SOCKS5 代理绑定 IP（0.0.0.0 表示所有网卡）"},
+		{"proxy.port", "1080", "SOCKS5 代理默认端口"},
+	}
+	for _, s := range settings {
+		_, _ = DB.Exec("INSERT OR IGNORE INTO settings (key, value, description) VALUES (?, ?, ?)",
+			s.key, s.value, s.desc)
 	}
 }

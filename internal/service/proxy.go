@@ -8,7 +8,7 @@ import (
 	"sync"
 
 	"github.com/armon/go-socks5"
-	"github.com/ccwt/ccwt/internal/config"
+	"github.com/ccwt/ccwt/internal/db"
 )
 
 // ProxyManager SOCKS5 代理管理
@@ -22,6 +22,24 @@ type ProxyManager struct {
 }
 
 var Proxy = &ProxyManager{}
+
+func getDefaultProxyIP() string {
+	var ip string
+	db.DB.QueryRow("SELECT value FROM settings WHERE key = 'proxy.ip'").Scan(&ip)
+	if ip == "" {
+		ip = "0.0.0.0"
+	}
+	return ip
+}
+
+func getDefaultProxyPort() int {
+	var port int
+	db.DB.QueryRow("SELECT value FROM settings WHERE key = 'proxy.port'").Scan(&port)
+	if port <= 0 {
+		port = 1080
+	}
+	return port
+}
 
 // Status 获取代理状态
 func (p *ProxyManager) Status() (bool, string, string, int) {
@@ -43,11 +61,11 @@ func (p *ProxyManager) Start(host string, port int) error {
 	}
 
 	if host == "" {
-		host = "0.0.0.0"
+		host = getDefaultProxyIP()
 	}
 
 	if port <= 0 {
-		port = config.Cfg.Proxy.Port
+		port = getDefaultProxyPort()
 	}
 	if port < 1 || port > 65535 {
 		return fmt.Errorf("端口范围无效: %d", port)
@@ -59,7 +77,7 @@ func (p *ProxyManager) Start(host string, port int) error {
 		return fmt.Errorf("创建SOCKS5服务失败: %v", err)
 	}
 
-	addr := fmt.Sprintf("0.0.0.0:%d", port)
+	addr := fmt.Sprintf("%s:%d", host, port)
 	ln, err := net.Listen("tcp", addr)
 	if err != nil {
 		return fmt.Errorf("监听端口失败: %v", err)

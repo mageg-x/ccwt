@@ -17,7 +17,7 @@ const engineLabel = ref('')
 let mediaStream = null
 let audioContext = null
 let sourceNode = null
-let processorNode = null
+let workletNode = null
 let silentGainNode = null
 let inputSampleRate = 48000
 let pcmChunks = []
@@ -55,19 +55,26 @@ async function startRecording() {
         inputSampleRate = audioContext.sampleRate || 48000
         pcmChunks = []
 
+        await audioContext.audioWorklet.addModule(new URL('../worklets/pcm-capture-worklet.js', import.meta.url))
+
         sourceNode = audioContext.createMediaStreamSource(mediaStream)
-        processorNode = audioContext.createScriptProcessor(4096, 1, 1)
+        workletNode = new AudioWorkletNode(audioContext, 'pcm-capture-processor', {
+            numberOfInputs: 1,
+            numberOfOutputs: 1,
+            channelCount: 1,
+        })
+        workletNode.port.onmessage = (event) => {
+            if (!recording.value) return
+            const data = event.data
+            if (data && data.length) {
+                pcmChunks.push(new Float32Array(data))
+            }
+        }
         silentGainNode = audioContext.createGain()
         silentGainNode.gain.value = 0
 
-        processorNode.onaudioprocess = (e) => {
-            if (!recording.value) return
-            const channel = e.inputBuffer.getChannelData(0)
-            pcmChunks.push(new Float32Array(channel))
-        }
-
-        sourceNode.connect(processorNode)
-        processorNode.connect(silentGainNode)
+        sourceNode.connect(workletNode)
+        workletNode.connect(silentGainNode)
         silentGainNode.connect(audioContext.destination)
 
         recording.value = true
@@ -79,8 +86,11 @@ async function startRecording() {
 
 function cleanupRecorder() {
     try { sourceNode?.disconnect() } catch {}
-    try { processorNode?.disconnect() } catch {}
+    try { workletNode?.disconnect() } catch {}
     try { silentGainNode?.disconnect() } catch {}
+    if (workletNode) {
+        try { workletNode.port.onmessage = null } catch {}
+    }
     if (mediaStream) {
         mediaStream.getTracks().forEach(t => t.stop())
     }
@@ -88,7 +98,7 @@ function cleanupRecorder() {
         audioContext.close().catch(() => {})
     }
     sourceNode = null
-    processorNode = null
+    workletNode = null
     silentGainNode = null
     mediaStream = null
     audioContext = null

@@ -56,6 +56,11 @@ func Setup(r *gin.Engine, webFS fs.FS) {
 			auth.POST("/voice/recognize", handler.VoiceRecognize)
 			auth.GET("/voice/status", handler.VoiceStatus)
 
+			// 设置
+			auth.GET("/settings", handler.GetSettings)
+			auth.GET("/settings/get", handler.GetSetting)
+			auth.PUT("/settings", handler.UpdateSetting)
+
 			// 管理员接口
 			admin := auth.Group("/admin", middleware.AdminRequired())
 			{

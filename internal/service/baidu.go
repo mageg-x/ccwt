@@ -11,12 +11,11 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/ccwt/ccwt/internal/db"
 )
 
 const (
-	baiduAppID    = "7634735"
-	baiduAPIKey   = "1QLOGTEIMqjo40Bq6yt7yEcO"
-	baiduSecret   = "yDVvrYuDgBCqPya18k4uESE6qvtg58wA"
 	baiduTokenURL = "https://aip.baidubce.com/oauth/2.0/token"
 	baiduASRURL   = "https://vop.baidu.com/server_api"
 )
@@ -33,6 +32,17 @@ var baiduClient = &baiduASR{
 	client: &http.Client{Timeout: 45 * time.Second},
 }
 
+func getBaiduConfig() (appID, apiKey, secret string) {
+	var val string
+	db.DB.QueryRow("SELECT value FROM settings WHERE key = 'voice.app_id'").Scan(&val)
+	appID = val
+	db.DB.QueryRow("SELECT value FROM settings WHERE key = 'voice.api_key'").Scan(&val)
+	apiKey = val
+	db.DB.QueryRow("SELECT value FROM settings WHERE key = 'voice.secret'").Scan(&val)
+	secret = val
+	return
+}
+
 func (b *baiduASR) getToken() (string, error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -41,10 +51,15 @@ func (b *baiduASR) getToken() (string, error) {
 		return b.token, nil
 	}
 
+	_, apiKey, secret := getBaiduConfig()
+	if apiKey == "" || secret == "" {
+		return "", fmt.Errorf("百度语音 API 未配置，请在设置中配置 API Key 和 Secret")
+	}
+
 	form := url.Values{}
 	form.Set("grant_type", "client_credentials")
-	form.Set("client_id", baiduAPIKey)
-	form.Set("client_secret", baiduSecret)
+	form.Set("client_id", apiKey)
+	form.Set("client_secret", secret)
 
 	req, _ := http.NewRequest(http.MethodPost, baiduTokenURL, strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -86,11 +101,16 @@ func (b *baiduASR) recognizeWav16k(audio []byte) (string, error) {
 		return "", err
 	}
 
+	appID, _, _ := getBaiduConfig()
+	if appID == "" {
+		appID = "7634735"
+	}
+
 	payload := map[string]any{
 		"format":  "wav",
 		"rate":    16000,
 		"channel": 1,
-		"cuid":    "ccwt-" + baiduAppID,
+		"cuid":    "ccwt-" + appID,
 		"token":   token,
 		"dev_pid": 1537,
 		"speech":  base64.StdEncoding.EncodeToString(audio),

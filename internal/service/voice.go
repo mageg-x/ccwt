@@ -5,7 +5,7 @@ import (
 	"io"
 	"log"
 
-	"github.com/ccwt/ccwt/internal/config"
+	"github.com/ccwt/ccwt/internal/db"
 )
 
 // VoiceManager 语音识别管理（百度在线 ASR）
@@ -13,9 +13,15 @@ type VoiceManager struct{}
 
 var Voice = &VoiceManager{}
 
+func isVoiceEnabled() bool {
+	var val string
+	db.DB.QueryRow("SELECT value FROM settings WHERE key = 'voice.enabled'").Scan(&val)
+	return val == "true" || val == "1"
+}
+
 // Recognize 语音识别，将 WAV(16k/mono) 音频转换为文本
 func (v *VoiceManager) Recognize(audioReader io.Reader) (string, error) {
-	if !config.Cfg.Voice.Enabled {
+	if !isVoiceEnabled() {
 		return "", fmt.Errorf("语音识别未启用")
 	}
 
@@ -43,7 +49,7 @@ func (v *VoiceManager) IsAvailable() bool {
 
 // Status 返回语音可用状态与原因
 func (v *VoiceManager) Status() (bool, string) {
-	if !config.Cfg.Voice.Enabled {
+	if !isVoiceEnabled() {
 		return false, "voice.disabled"
 	}
 	if _, err := baiduClient.getToken(); err != nil {

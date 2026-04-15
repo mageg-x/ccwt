@@ -26,6 +26,12 @@ const routes = [
         component: () => import('../views/Admin.vue'),
         meta: { auth: true, admin: true },
     },
+    {
+        path: '/settings',
+        name: 'Settings',
+        component: () => import('../views/Settings.vue'),
+        meta: { auth: true },
+    },
 ]
 
 const router = createRouter({
