@@ -51,12 +51,12 @@ func Register(c *gin.Context) {
 		return
 	}
 
-	if !config.Cfg.Register.Open {
+	if config.Cfg.Register.InviteCode == "" {
 		c.JSON(http.StatusForbidden, gin.H{"error": "注册已关闭"})
 		return
 	}
 
-	if config.Cfg.Register.InviteCode != "" && req.InviteCode != config.Cfg.Register.InviteCode {
+	if req.InviteCode != config.Cfg.Register.InviteCode {
 		c.JSON(http.StatusForbidden, gin.H{"error": "邀请码错误"})
 		return
 	}

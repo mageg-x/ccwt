@@ -20,6 +20,7 @@ let closed = false
 let refreshTimer = null
 let activateRaf = null
 let activateFallbackTimer = null
+let openResizeTimer = null
 
 function scheduleTreeRefresh() {
     if (refreshTimer) clearTimeout(refreshTimer)
@@ -46,6 +47,18 @@ const { term, mount, write, fit, focus } = useTerminal(containerRef, {
     theme: computed(() => app.theme === 'light' ? 'dark' : app.theme),
 })
 
+function syncPtySize() {
+    fit()
+    if (ws?.readyState !== WebSocket.OPEN) return
+    const rawRows = term.value?.rows
+    const rawCols = term.value?.cols
+    // 防止异常测量值导致后端列数过大/过小，出现输入不换行
+    const rows = Math.min(300, Math.max(8, Number(rawRows) || 0))
+    const cols = Math.min(400, Math.max(40, Number(rawCols) || 0))
+    if (!rows || !cols) return
+    ws.send(JSON.stringify({ type: 'resize', rows, cols }))
+}
+
 function connect() {
     const tab = termStore.tabs.find(t => t.id === props.tabId)
     const proto = location.protocol === 'https:' ? 'wss:' : 'ws:'
@@ -59,7 +72,12 @@ function connect() {
     ws.binaryType = 'arraybuffer'
 
     ws.onopen = () => {
-        // 连接成功
+        // 连接建立后强制同步一次尺寸，避免后端仍停留在默认 80 列
+        if (openResizeTimer) clearTimeout(openResizeTimer)
+        openResizeTimer = setTimeout(() => {
+            syncPtySize()
+            openResizeTimer = null
+        }, 40)
     }
 
     ws.onmessage = (e) => {
@@ -109,6 +127,7 @@ onMounted(async () => {
 onUnmounted(() => {
     closed = true
     if (refreshTimer) clearTimeout(refreshTimer)
+    if (openResizeTimer) clearTimeout(openResizeTimer)
     if (activateRaf) cancelAnimationFrame(activateRaf)
     if (activateFallbackTimer) clearTimeout(activateFallbackTimer)
     ws?.close()
@@ -116,7 +135,7 @@ onUnmounted(() => {
 
 function syncActiveTerminal() {
     if (!isActive.value) return
-    fit()
+    syncPtySize()
     focus()
 }
 

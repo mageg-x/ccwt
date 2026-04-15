@@ -2,16 +2,22 @@
 import { ref, onMounted, watch, shallowRef } from 'vue'
 import { useAppStore } from '../../stores/app'
 import { useFileStore } from '../../stores/file'
-import * as monaco from 'monaco-editor'
 
 const app = useAppStore()
 const fileStore = useFileStore()
 const container = ref(null)
 const editor = shallowRef(null)
 const saving = ref(false)
+let monaco = null
 
-onMounted(() => {
+onMounted(async () => {
     if (!container.value || !fileStore.editingFile) return
+    
+    // 动态导入 Monaco 编辑器
+    if (!monaco) {
+        monaco = await import('monaco-editor')
+    }
+    
     editor.value = monaco.editor.create(container.value, {
         value: fileStore.editingFile.content,
         language: fileStore.editingFile.language,
@@ -31,7 +37,9 @@ onMounted(() => {
 })
 
 watch(() => app.isDark, (dark) => {
-    monaco.editor.setTheme(dark ? 'vs-dark' : 'vs')
+    if (monaco) {
+        monaco.editor.setTheme(dark ? 'vs-dark' : 'vs')
+    }
 })
 
 async function save() {

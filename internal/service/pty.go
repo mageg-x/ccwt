@@ -107,7 +107,7 @@ func (r *RingBuffer) Bytes() []byte {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if !r.full {
-		return append([]byte{}, r.data[:r.pos]...)
+		return sanitizeReplayPrefix(append([]byte{}, r.data[:r.pos]...))
 	}
 	out := make([]byte, r.size)
 	copy(out, r.data[r.pos:])
@@ -116,9 +116,63 @@ func (r *RingBuffer) Bytes() []byte {
 	// 刷新重连回放时会把残片当普通文本显示。对满缓冲场景从下一行起回放，
 	// 牺牲一小段最旧行内容，换取稳定可读的恢复效果。
 	if nl := bytes.IndexByte(out, '\n'); nl >= 0 && nl+1 < len(out) {
-		return append([]byte{}, out[nl+1:]...)
+		return sanitizeReplayPrefix(append([]byte{}, out[nl+1:]...))
 	}
-	return out
+	return sanitizeReplayPrefix(out)
+}
+
+func isCsiFinalByte(b byte) bool {
+	return b >= 0x40 && b <= 0x7E
+}
+
+// sanitizeReplayPrefix 清理回放缓冲区前缀中的残缺控制序列碎片，
+// 避免刷新重连后出现类似 "1;2c" 的可见脏字符。
+func sanitizeReplayPrefix(in []byte) []byte {
+	b := in
+	for len(b) > 0 {
+		// 去掉前缀控制字符（保留 \r \n \t）
+		if b[0] < 0x20 && b[0] != '\r' && b[0] != '\n' && b[0] != '\t' {
+			b = b[1:]
+			continue
+		}
+
+		// 完整 CSI: ESC [ ... final
+		if len(b) >= 2 && b[0] == 0x1B && b[1] == '[' {
+			i := 2
+			for i < len(b) {
+				if isCsiFinalByte(b[i]) {
+					b = b[i+1:]
+					goto next
+				}
+				i++
+			}
+			// 不完整 CSI，整段丢弃
+			return []byte{}
+		}
+
+		// 处理被截断后丢失 ESC 的残片: [1;2c 或 ?1;2c 或 1;2c
+		if b[0] == '[' || b[0] == '?' || (b[0] >= '0' && b[0] <= '9') {
+			i := 0
+			if b[i] == '[' {
+				i++
+			}
+			if i < len(b) && b[i] == '?' {
+				i++
+			}
+			startNum := i
+			for i < len(b) && ((b[i] >= '0' && b[i] <= '9') || b[i] == ';') {
+				i++
+			}
+			if i > startNum && i < len(b) && isCsiFinalByte(b[i]) {
+				b = b[i+1:]
+				goto next
+			}
+		}
+
+		break
+	next:
+	}
+	return b
 }
 
 // PtyManager 管理所有 PTY 会话

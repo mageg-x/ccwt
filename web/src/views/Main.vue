@@ -60,6 +60,8 @@ function handleVoiceResult(text) {
         const termPane = termRefs.value[active.id]
         // 仅注入命令文本，不自动回车执行；用户可手动确认后回车
         termPane?.sendInput?.(text.endsWith(' ') ? text : `${text} `)
+        // 语音输入后自动把焦点还给终端，避免每次手动点击
+        setTimeout(() => termPane?.focus?.(), 0)
     }
 }
 
