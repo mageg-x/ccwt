@@ -82,7 +82,9 @@ export default {
     newTab: '新建终端',
     rename: '重命名终端',
     terminalName: '终端名称',
-    newTerminal: '新建终端'
+    newTerminal: '新建终端',
+    enterFocus: '终端最大化',
+    exitFocus: '退出最大化'
   },
   voice: {
     title: '语音输入',
@@ -98,6 +100,16 @@ export default {
     authFailed: '百度鉴权失败或网络不可达',
     statusFailed: '无法获取后端语音状态',
     recognitionFailed: '语音识别失败'
+  },
+  fileTree: {
+    uploadNoticeTitle: '上传提示',
+    uploadResultTitle: '上传结果',
+    dirUploadIgnored: '目录拖放上传暂不支持，已忽略目录',
+    dirUploadNotSupported: '目录拖放上传暂不支持',
+    invalidMoveTarget: '不能移动到该目录',
+    moveFailedTitle: '移动失败',
+    moveFailedMessage: '移动失败',
+    uploadPartialFailed: '上传完成，失败 {count} 个'
   },
   admin: {
     title: '管理面板',
@@ -117,5 +129,28 @@ export default {
     role: '角色',
     registeredAt: '注册时间',
     actions: '操作'
+  },
+  contextMenu: {
+    newFile: '新建文件',
+    newFolder: '新建文件夹',
+    rename: '重命名',
+    copyPath: '复制路径',
+    download: '下载',
+    delete: '删除',
+    enterFileName: '请输入文件名',
+    enterFolderName: '请输入文件夹名',
+    enterNewName: '请输入新名称',
+    fileNameExample: '例如: notes.md',
+    folderNameExample: '例如: docs',
+    newName: '新名称',
+    create: '创建',
+    save: '保存',
+    confirmDelete: '确定删除 {name}？',
+    confirmDeleteTitle: '确认删除',
+    operationFailed: '操作失败',
+    createFileFailed: '创建文件失败',
+    createFolderFailed: '创建文件夹失败',
+    renameFailed: '重命名失败',
+    deleteFailed: '删除失败'
   }
 }

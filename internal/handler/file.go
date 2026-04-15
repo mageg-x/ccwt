@@ -133,6 +133,25 @@ func RenameFile(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "已重命名"})
 }
 
+// MoveFile 移动文件或目录到目标目录
+func MoveFile(c *gin.Context) {
+	username, _ := c.Get("username")
+	var req struct {
+		SrcPath string `json:"src_path" binding:"required"`
+		DstDir  string `json:"dst_dir" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "参数无效"})
+		return
+	}
+	if err := service.Move(username.(string), req.SrcPath, req.DstDir); err != nil {
+		log.Printf("MoveFile 失败: user=%s src=%s dstDir=%s err=%v", username, req.SrcPath, req.DstDir, err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "已移动"})
+}
+
 // UploadFile 上传文件
 func UploadFile(c *gin.Context) {
 	username, _ := c.Get("username")

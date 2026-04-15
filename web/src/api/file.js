@@ -7,6 +7,7 @@ export const writeFile = (path, content) => api.post('/files/write', { path, con
 export const mkdir = (path) => api.post('/files/mkdir', { path })
 export const deleteFile = (path) => api.delete('/files', { params: { path } })
 export const renameFile = (oldPath, newPath) => api.post('/files/rename', { old_path: oldPath, new_path: newPath })
+export const moveFile = (srcPath, dstDir) => api.post('/files/move', { src_path: srcPath, dst_dir: dstDir })
 export const uploadFile = (path, file) => {
     const fd = new FormData()
     fd.append('file', file)

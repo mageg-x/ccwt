@@ -8,7 +8,7 @@ const { t } = useI18n()
 const app = useAppStore()
 const termStore = useTerminalStore()
 const dialog = useDialogStore()
-const emit = defineEmits(['newTab'])
+const emit = defineEmits(['newTab', 'toggleFocus'])
 
 function closeTab(e, id) {
     e.stopPropagation()
@@ -62,6 +62,20 @@ async function dblClick(tab) {
             :title="t('term.newTab')">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+        </button>
+
+        <button
+            @click="emit('toggleFocus')"
+            class="p-2 rounded-xl transition-colors border"
+            :class="app.isDark ? 'text-slate-300 border-white/10 hover:text-white hover:bg-white/5' : 'text-slate-500 border-slate-200 hover:text-slate-700 hover:bg-slate-100'"
+            :title="app.termFocusMode ? t('term.exitFocus') : t('term.enterFocus')"
+        >
+            <svg v-if="!app.termFocusMode" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4h4M20 8V4h-4M4 16v4h4M20 16v4h-4" />
+            </svg>
+            <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 4H4v4M16 4h4v4M8 20H4v-4M20 20h-4v-4" />
             </svg>
         </button>
     </div>

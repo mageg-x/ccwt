@@ -82,7 +82,9 @@ export default {
     newTab: 'New Terminal',
     rename: 'Rename Terminal',
     terminalName: 'Terminal Name',
-    newTerminal: 'New Terminal'
+    newTerminal: 'New Terminal',
+    enterFocus: 'Maximize Terminal',
+    exitFocus: 'Exit Maximized View'
   },
   voice: {
     title: 'Voice Input',
@@ -98,6 +100,16 @@ export default {
     authFailed: 'Baidu auth failed or network unreachable',
     statusFailed: 'Cannot get backend voice status',
     recognitionFailed: 'Voice recognition failed'
+  },
+  fileTree: {
+    uploadNoticeTitle: 'Upload Notice',
+    uploadResultTitle: 'Upload Result',
+    dirUploadIgnored: 'Folder drag-and-drop upload is not supported. Folder entries were ignored.',
+    dirUploadNotSupported: 'Folder drag-and-drop upload is not supported.',
+    invalidMoveTarget: 'Cannot move to this directory.',
+    moveFailedTitle: 'Move Failed',
+    moveFailedMessage: 'Move failed',
+    uploadPartialFailed: 'Upload completed, {count} failed.'
   },
   admin: {
     title: 'Admin Panel',
@@ -117,5 +129,28 @@ export default {
     role: 'Role',
     registeredAt: 'Registered At',
     actions: 'Actions'
+  },
+  contextMenu: {
+    newFile: 'New File',
+    newFolder: 'New Folder',
+    rename: 'Rename',
+    copyPath: 'Copy Path',
+    download: 'Download',
+    delete: 'Delete',
+    enterFileName: 'Enter file name',
+    enterFolderName: 'Enter folder name',
+    enterNewName: 'Enter new name',
+    fileNameExample: 'e.g.: notes.md',
+    folderNameExample: 'e.g.: docs',
+    newName: 'New name',
+    create: 'Create',
+    save: 'Save',
+    confirmDelete: 'Are you sure you want to delete {name}?',
+    confirmDeleteTitle: 'Confirm Delete',
+    operationFailed: 'Operation failed',
+    createFileFailed: 'Failed to create file',
+    createFolderFailed: 'Failed to create folder',
+    renameFailed: 'Failed to rename',
+    deleteFailed: 'Failed to delete'
   }
 }

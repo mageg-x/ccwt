@@ -12,6 +12,17 @@ onMounted(() => {
 })
 
 const emit = defineEmits(['cd', 'openFile'])
+
+function preventBrowserFileDrop(e) {
+    const dt = e.dataTransfer
+    if (!dt) return
+    const hasFiles = (dt.files?.length || 0) > 0
+        || Array.from(dt.items || []).some((it) => it.kind === 'file')
+        || Array.from(dt.types || []).includes('Files')
+    if (hasFiles) {
+        e.preventDefault()
+    }
+}
 </script>
 
 <template>
@@ -38,7 +49,11 @@ const emit = defineEmits(['cd', 'openFile'])
             </div>
 
             <!-- 文件树 -->
-            <div class="flex-1 overflow-y-auto p-2">
+            <div
+                class="flex-1 overflow-y-auto p-2"
+                @dragover="preventBrowserFileDrop"
+                @drop="preventBrowserFileDrop"
+            >
                 <div v-if="fileStore.loading" class="flex items-center justify-center py-8">
                     <svg class="animate-spin w-5 h-5 text-indigo-400" fill="none" viewBox="0 0 24 24">
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />

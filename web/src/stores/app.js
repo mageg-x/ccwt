@@ -6,6 +6,7 @@ export const useAppStore = defineStore('app', () => {
     const theme = ref('dark')
     const sidebarOpen = ref(true)
     const cmdPaletteOpen = ref(false)
+    const termFocusMode = ref(false)
     const isMobile = useMediaQuery('(max-width: 767px)')
 
     const isDark = computed(() => theme.value === 'dark' || theme.value === 'shell')
@@ -40,8 +41,17 @@ export const useAppStore = defineStore('app', () => {
         cmdPaletteOpen.value = !cmdPaletteOpen.value
     }
 
+    function toggleTermFocusMode() {
+        termFocusMode.value = !termFocusMode.value
+    }
+
+    function setTermFocusMode(value) {
+        termFocusMode.value = !!value
+    }
+
     return {
-        theme, sidebarOpen, cmdPaletteOpen, isMobile, isDark,
+        theme, sidebarOpen, cmdPaletteOpen, termFocusMode, isMobile, isDark,
         initTheme, toggleTheme, setTheme, toggleSidebar, toggleCmdPalette,
+        toggleTermFocusMode, setTermFocusMode,
     }
 })

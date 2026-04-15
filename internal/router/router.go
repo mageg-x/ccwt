@@ -37,6 +37,7 @@ func Setup(r *gin.Engine, webFS fs.FS) {
 			auth.POST("/files/mkdir", handler.CreateDir)
 			auth.DELETE("/files", handler.DeleteFile)
 			auth.POST("/files/rename", handler.RenameFile)
+			auth.POST("/files/move", handler.MoveFile)
 			auth.POST("/files/upload", handler.UploadFile)
 			auth.GET("/files/download", handler.DownloadFile)
 

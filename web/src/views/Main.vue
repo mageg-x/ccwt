@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import { useAppStore } from '../stores/app'
 import { useTerminalStore } from '../stores/terminal'
@@ -79,8 +79,22 @@ function handleCmdAction(action) {
     else if (action === 'refreshTree') fileStore.loadTree()
 }
 
+function toggleTermFocusMode() {
+    app.toggleTermFocusMode()
+}
+
 // Cmd+K 快捷键
 function onKeydown(e) {
+    if (e.key === 'Escape' && app.termFocusMode) {
+        e.preventDefault()
+        app.setTermFocusMode(false)
+        return
+    }
+    if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'Enter') {
+        e.preventDefault()
+        app.toggleTermFocusMode()
+        return
+    }
     if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault()
         app.toggleCmdPalette()
@@ -96,21 +110,29 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
         :class="app.isDark ? 'app-shell-dark text-slate-200' : 'app-shell-light text-slate-800'">
         <div class="app-shell-glow app-shell-glow-a"></div>
         <div class="app-shell-glow app-shell-glow-b"></div>
-        <TopBar @voiceResult="handleVoiceResult" />
+        <TopBar v-if="!app.termFocusMode" @voiceResult="handleVoiceResult" />
 
         <div class="flex flex-1 overflow-hidden relative z-10">
-            <Sidebar @cd="handleCd" @openFile="handleOpenFile" />
+            <Sidebar v-if="!app.termFocusMode" @cd="handleCd" @openFile="handleOpenFile" />
 
             <!-- 主内容区 -->
-            <main class="flex-1 flex flex-col overflow-hidden min-w-0 px-2 pb-2">
+            <main class="flex-1 flex flex-col overflow-hidden min-w-0"
+                :class="app.termFocusMode ? 'px-0 pb-0' : 'px-2 pb-2'">
                 <!-- 文件编辑器（悬浮覆盖在终端上方） -->
-                <div v-if="fileStore.editingFile" class="flex-1 flex flex-col overflow-hidden rounded-2xl border border-white/10 backdrop-blur-md">
+                <div
+                    v-if="fileStore.editingFile && !app.termFocusMode"
+                    class="flex-1 flex flex-col overflow-hidden rounded-2xl border border-white/10 backdrop-blur-md"
+                >
                     <FileEditor />
                 </div>
 
                 <!-- 终端区域 -->
-                <div v-show="!fileStore.editingFile" class="flex-1 flex flex-col overflow-hidden terminal-stage">
-                    <TerminalTabs @newTab="newTab" />
+                <div
+                    v-show="!fileStore.editingFile || app.termFocusMode"
+                    class="flex-1 flex flex-col overflow-hidden terminal-stage"
+                    :class="app.termFocusMode ? 'rounded-none border-0' : ''"
+                >
+                    <TerminalTabs @newTab="newTab" @toggleFocus="toggleTermFocusMode" />
 
                     <!-- 终端面板 -->
                     <div class="terminal-stage-body flex-1 relative overflow-hidden">
@@ -141,7 +163,7 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
             </main>
         </div>
 
-        <StatusBar />
+        <StatusBar v-if="!app.termFocusMode" />
 
         <!-- 快捷指令面板 -->
         <CommandPalette

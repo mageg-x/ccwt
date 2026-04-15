@@ -177,6 +177,43 @@ func Rename(username, oldPath, newPath string) error {
 	return os.Rename(oldFull, newFull)
 }
 
+// Move 移动文件或目录到目标目录（保留原名称）
+func Move(username, srcPath, dstDir string) error {
+	srcFull, err := SafePath(username, srcPath)
+	if err != nil {
+		return err
+	}
+	dstDirFull, err := SafePath(username, dstDir)
+	if err != nil {
+		return err
+	}
+
+	srcInfo, err := os.Stat(srcFull)
+	if err != nil {
+		return err
+	}
+	dstInfo, err := os.Stat(dstDirFull)
+	if err != nil {
+		return err
+	}
+	if !dstInfo.IsDir() {
+		return fmt.Errorf("目标不是目录")
+	}
+
+	dstFull := filepath.Join(dstDirFull, filepath.Base(srcFull))
+	if srcFull == dstFull {
+		return nil
+	}
+	if srcInfo.IsDir() && isWithin(srcFull, dstFull) {
+		return fmt.Errorf("不能移动到自身或其子目录")
+	}
+	if _, err := os.Stat(dstFull); err == nil {
+		return fmt.Errorf("目标已存在同名文件或目录")
+	}
+
+	return os.Rename(srcFull, dstFull)
+}
+
 // SaveUpload 保存上传的文件
 func SaveUpload(username, relPath string, reader io.Reader) error {
 	full, err := SafePath(username, relPath)

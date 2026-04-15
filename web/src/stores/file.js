@@ -7,6 +7,7 @@ export const useFileStore = defineStore('file', () => {
     const loading = ref(false)
     const editingFile = ref(null) // { path, content, language }
     const expandedByPath = ref({})
+    const draggingNode = ref(null) // { path, name, isDir }
 
     async function loadTree(path = '.') {
         loading.value = true
@@ -72,8 +73,13 @@ export const useFileStore = defineStore('file', () => {
         return next
     }
 
+    function setDraggingNode(node) {
+        draggingNode.value = node || null
+    }
+
     return {
         tree, loading, editingFile, loadTree, openFile, closeEditor, saveFile,
         isExpanded, setExpanded, toggleExpanded,
+        draggingNode, setDraggingNode,
     }
 })
